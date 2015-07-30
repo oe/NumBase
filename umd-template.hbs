@@ -1,0 +1,20 @@
+(function (root, factory) {
+  if (typeof define === 'function' && (define.amd || define.cmd) ) {
+    // for amd & cmd loader
+    define({{#if amdModuleId}}'{{amdModuleId}}', {{/if}}{{#if amdDependencies.wrapped}}[{{{amdDependencies.wrapped}}}], {{/if}}function ({{{amdDependencies.params}}}) {
+      return factory(root);
+    });
+  } else if (typeof exports === 'object') {
+    // for Nodejs
+    module.exports = factory(root);
+  } else {
+    {{#if fallbackAlias}}root['{{{fallbackAlias}}}'] = {{/if}}{{#if globalAlias}}root['{{{globalAlias}}}'] = {{else}}{{#if objectToExport}}root['{{{objectToExport}}}'] = {{/if}}{{/if}}factory(root);
+  }
+}(typeof window !== 'undefined' ? window : this, function (root) {
+
+{{{code}}}
+{{#if objectToExport}}
+return {{{objectToExport}}};
+{{/if}}
+
+}));
