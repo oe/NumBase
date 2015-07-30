@@ -19,13 +19,13 @@ NumBase::decode(encodedNumber, base=baseString.length);
 var baseString = '中国上海市徐汇区';
 // Setup the NumBase instance
 base = new NumBase(baseString);
-// Encode an integer, use default radix 8
+// Encode an integer, use default base 8
 base.encode(19901230); // returns '国国海区上徐市徐汇'
-// Decode a string, with default radix 8
+// Decode a string, with default base 8
 base.decode('国国海区上徐市徐汇'); // returns 19901230
 
-// Encode an integer, with radix 7
-base.encode(19901230); // returns '海海国国中徐中海汇'
-// Decode a string, with radix 7
-base.decode('海海国国中徐中海汇'); // returns 19901230
+// Encode an integer, with base 7
+base.encode(19901230, 7); // returns '海海国国中徐中海汇'
+// Decode a string, with base 7
+base.decode('海海国国中徐中海汇', 7); // returns 19901230
 ```
