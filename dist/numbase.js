@@ -32,7 +32,7 @@ NumBase = (function() {
     for (k = _i = 0, _len = charList.length; _i < _len; k = ++_i) {
       v = charList[k];
       if (k !== charList.indexOf(v)) {
-        throw new TypeError("duplicate character <" + v + "> found");
+        throw new TypeError("duplicated character <" + v + "> found");
       }
     }
     this.BASE = charList;
@@ -44,11 +44,7 @@ NumBase = (function() {
     if (b == null) {
       b = this.MAX_BASE;
     }
-    b = +b;
-    if (!(isNum(b) && b <= this.MAX_BASE && b > 1)) {
-      return n;
-    }
-    if (!isNum(n)) {
+    if (!(isNum(n) && isNum(b) && b <= this.MAX_BASE && b > 1)) {
       return n;
     }
     prefix = n < 0 ? '-' : '';
@@ -83,7 +79,7 @@ NumBase = (function() {
       v = n[k];
       i = this.BASE.indexOf(v);
       if (i === -1) {
-        throw new TypeError("unexpected letter <" + v + "> found");
+        throw new TypeError("unexpected character <" + v + "> found");
       }
       num += i * Math.pow(b, len - 1 - k);
     }

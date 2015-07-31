@@ -4,7 +4,7 @@ convert an integer with any base(radix), represented with any character
 ## Methods
 
 ```js
-// constructor, by default use the all alphanumerics (base62)
+// constructor, by default base string will be all alphanumerics (base62)
 NumBase(baseString='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 // encode, default base will be the baseString's length
 NumBase::encode(number, base=baseString.length);
@@ -13,6 +13,8 @@ NumBase::decode(encodedNumber, base=baseString.length);
 ```
 
 ## Usage
+
+You can include the script with `script` tag, or with amd/cmd(such as requirejs, commonjs ) loaders
 
 ```js
 // The base string.

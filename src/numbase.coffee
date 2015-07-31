@@ -11,16 +11,13 @@ class NumBase
     charList = (charList or defaultChartList).split('')
     for v, k in charList
       if k isnt charList.indexOf v
-        throw new TypeError "duplicate character <#{v}> found"
+        throw new TypeError "duplicated character <#{v}> found"
     @BASE = charList
     @MAX_BASE = @BASE.length
 
 
   encode: (n, b=@MAX_BASE) ->
-    b = +b
-    return n unless isNum(b) and b <= @MAX_BASE and b > 1
-
-    return n unless isNum n
+    return n unless isNum(n) and isNum(b) and b <= @MAX_BASE and b > 1
     # for negtive number
     prefix = if n < 0 then '-' else ''
     n = Math.abs n
@@ -35,7 +32,7 @@ class NumBase
     return n unless isNum(b) and b <= @MAX_BASE and b > 1
     num = 0
     n = "#{n}".split ''
-    # fro negtive number
+    # for negtive number
     if n[0] is '-'
       negtive = true
       n.shift()
@@ -44,9 +41,8 @@ class NumBase
     for v, k in n
       i = @BASE.indexOf v
       if i is -1
-        throw new TypeError "unexpected letter <#{v}> found"
+        throw new TypeError "unexpected character <#{v}> found"
       num += i * Math.pow b, len - 1 - k
-    if negtive
-      num = -num
+    num = -num if negtive
     num
 
