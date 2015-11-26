@@ -1,5 +1,6 @@
 # NumBase
-convert an integer with any base(radix), represented with any character
+Convert an integer with any base(radix), represented with any character
+
 
 ## Methods
 
@@ -14,7 +15,24 @@ NumBase::decode(encodedNumber, base=baseString.length);
 
 ## Usage
 
+## for nodejs
+install it with npm:
+
+```
+npm install Numbase
+```
+
+then require it:
+
+```js
+var Numbase = require('NumBase');
+```
+
+
+### for browsers
 You can include the script with `script` tag, or with amd/cmd(such as requirejs, commonjs ) loaders
+
+### examples
 
 ```js
 // The base string.

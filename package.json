@@ -1,9 +1,8 @@
 {
   "name": "NumBase",
-  "version": "0.0.5",
-  "description": "mobile web app engine",
-  "main": "dist/app.js",
-  "readme": "readme.md",
+  "version": "0.0.6",
+  "description": "convert an integer with any base(radix), represented with any character",
+  "main": "dist/numbase.min.js",
   "repository": "https://github.com/evecalm/NumBase",
   "devDependencies": {
     "grunt": "~0.4.5",
@@ -16,5 +15,14 @@
     "company": "evecalm.com",
     "developer": "Saiya"
   },
-  "license": "MIT"
+  "keywords": [
+    "number base",
+    "base",
+    "radix"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/evecalm/NumBase/issues"
+  },
+  "homepage": "https://github.com/evecalm/NumBase#readme"
 }

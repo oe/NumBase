@@ -93,9 +93,6 @@ NumBase = (function() {
 
 })();
 
-/*
-//@ sourceMappingURL=numbase.js.map
-*/
 return NumBase;
 
 }));

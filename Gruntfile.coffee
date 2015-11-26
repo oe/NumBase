@@ -34,7 +34,7 @@ module.exports = (grunt)->
       main:
         options:
           bare: true
-          sourceMap: true
+          sourceMap: false
         src: 'src/numbase.coffee'
         dest: DIST_PATH + '/numbase.js'
 
@@ -51,11 +51,12 @@ module.exports = (grunt)->
       options:
         banner: '/*!\n'+
           ' * <%= pkg.name %> v<%= pkg.version %>\n' +
-          ' * Copyright© <%= (new Date).getFullYear() %> <%= pkg.author.company %>版权所有\n' +
+          ' * Author <%= pkg.author.developer %>\n' +
+          ' * Copyright© <%= (new Date).getFullYear() %> <%= pkg.author.company %>\n' +
           ' */\n'
       min:
         options:
-          sourceMap: true
+          sourceMap: false
           sourceMapIn: DIST_PATH + '/numbase.js.map'
         src: DIST_PATH + '/numbase.js'
         dest: DIST_PATH + '/numbase.min.js'
