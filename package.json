@@ -1,6 +1,6 @@
 {
-  "name": "NumBase",
-  "version": "0.0.6",
+  "name": "numbase",
+  "version": "0.0.7",
   "description": "convert an integer with any base(radix), represented with any character",
   "main": "dist/numbase.min.js",
   "repository": "https://github.com/evecalm/NumBase",

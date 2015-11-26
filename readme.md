@@ -25,7 +25,7 @@ npm install Numbase
 then require it:
 
 ```js
-var Numbase = require('NumBase');
+var Numbase = require('numbase');
 ```
 
 
