@@ -19,7 +19,7 @@ NumBase::decode(encodedNumber, base=baseString.length);
 install it with npm:
 
 ```
-npm install Numbase
+npm install numbase
 ```
 
 then require it:
