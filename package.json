@@ -1,7 +1,7 @@
 {
   "name": "numbase",
-  "version": "0.0.9",
-  "description": "convert an integer with any base(radix), represented with any character",
+  "version": "0.1.1",
+  "description": "convert an integer(can be a big number) with any base(radix), represented with any character",
   "main": "dist/numbase.min.js",
   "repository": "https://github.com/evecalm/NumBase",
   "devDependencies": {
@@ -16,7 +16,8 @@
     "developer": "Saiya"
   },
   "keywords": [
-    "number base",
+    "bignumber",
+    "number",
     "base",
     "radix"
   ],

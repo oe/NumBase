@@ -52,12 +52,12 @@ base = new NumBase('中国上海市徐汇区');
 // Encode an integer, use default radix 8
 base.encode(19901230); // returns '国国海区上徐市徐汇'
 // Decode a string, with default radix 8
-base.decode('国国海区上徐市徐汇'); // returns 19901230
+base.decode('国国海区上徐市徐汇'); // returns '19901230'
 
 // Encode an integer, with radix 7
 base.encode(19901230, 7); // returns '海海国国中徐中海汇'
 // Decode a string, with radix 7
-base.decode('海海国国中徐中海汇', 7); // returns 19901230
+base.decode('海海国国中徐中海汇', 7); // returns '19901230'
 
 
 
