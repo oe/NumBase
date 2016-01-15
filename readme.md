@@ -3,6 +3,8 @@ Convert an integer with any base(radix), represented with any character
 
 **You can conver a big number! Yeah, can be super big!**
 
+
+
 ## Methods
 
 ```js
@@ -13,6 +15,8 @@ NumBase::encode(number, base=baseString.length);
 // decode, default base will be the baseString's length
 NumBase::decode(encodedNumber, base=baseString.length);
 ```
+
+`NumBase::encode` is something like `Number.prototype.toString`, but it won't limit the base size, and you can revert it with `NumBase::decode`.
 
 ## Usage
 
