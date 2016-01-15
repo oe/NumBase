@@ -19,10 +19,14 @@
 var NumBase;
 
 NumBase = (function() {
-  var isNum;
+  var add, divide, isBigNum, isNum, multiply;
 
   isNum = function(n) {
     return /^-?[\d]+$/.test("" + n);
+  };
+
+  isBigNum = function(n) {
+    return /e\+/.test(String(n));
   };
 
   function NumBase(charList) {
@@ -36,57 +40,152 @@ NumBase = (function() {
       }
     }
     this.BASE = charList;
+    if (isBigNum(Math.pow(charList.length, 2))) {
+      throw new TypeError('the base is super big, consider a small one');
+    }
     this.MAX_BASE = this.BASE.length;
   }
 
+  divide = function(n, b) {
+    var mod, times;
+    times = '';
+    mod = '';
+    while (n.length) {
+      mod += n.substr(0, 1);
+      n = n.substr(1);
+      mod = +mod;
+      times += String(Math.floor(mod / b));
+      mod = String(mod % b);
+    }
+    return {
+      times: times.replace(/^0+/, ''),
+      mod: mod
+    };
+  };
+
+  /**
+   * encode a number in decimalism
+   * @param  {Number|String} n           number to encode, if a big number, pass a string
+   * @param  {Number} b=@MAX_BASE        base size
+   * @return {String}                    encoded string
+  */
+
+
   NumBase.prototype.encode = function(n, b) {
-    var prefix, res;
+    var result, ret, sign;
     if (b == null) {
       b = this.MAX_BASE;
+    }
+    if (typeof n === 'number' && isBigNum(n)) {
+      throw new TypeError('number you wanna encode is super big, conside pass it as a string instead');
     }
     if (!(isNum(n) && isNum(b) && b <= this.MAX_BASE && b > 1)) {
       return n;
     }
-    prefix = n < 0 ? '-' : '';
-    n = Math.abs(n);
-    res = [];
-    while (true) {
-      res.push(this.BASE[n % b]);
-      n = Math.floor(n / b);
-      if (!n) {
-        break;
-      }
+    n = String(n);
+    sign = '';
+    if (n.charAt(0) === '-') {
+      sign = '-';
+      n = n.substr(1);
     }
-    return prefix + res.reverse().join('');
+    result = '';
+    ret = {
+      times: n
+    };
+    while (ret.times) {
+      ret = divide(ret.times, b);
+      result = this.BASE[+ret.mod] + result;
+    }
+    return sign + result;
   };
 
+  /**
+   * multiply a big number(n) with b (small number)
+   * @param  {Number|String} n a number or a big number in string
+   * @param  {Number}        b a small number
+   * @return {String}
+  */
+
+
+  multiply = function(n, b) {
+    var last, res, ret, s;
+    ret = '';
+    n = String(n).split('');
+    last = 0;
+    while (s = n.pop()) {
+      res = String(s * b + last);
+      ret = res.substr(-1) + ret;
+      res = res.slice(0, -1);
+      last = res ? +res : 0;
+    }
+    if (last) {
+      ret = String(last) + ret;
+    }
+    return ret;
+  };
+
+  /**
+   * add two big number
+   * @param {Number|String} n
+   * @param {Number|String} m
+  */
+
+
+  add = function(n, m) {
+    var last, ml, nl, res, ret, _ref;
+    ret = '';
+    n = String(n).split('');
+    m = String(m).split('');
+    if (n.length < m.length) {
+      _ref = [m, n], n = _ref[0], m = _ref[1];
+    }
+    last = 0;
+    while (nl = n.pop()) {
+      ml = m.pop() || 0;
+      res = (+nl) + (+ml) + last;
+      ret = String(res % 10) + ret;
+      last = Math.floor(res / 10);
+    }
+    if (last) {
+      ret = last + ret;
+    }
+    return ret;
+  };
+
+  /**
+   * decode a string
+   * @param  {String} n           encoded number, should be a string
+   * @param  {Number} b=@MAX_BASE base size
+   * @return {String}             decoded number
+  */
+
+
   NumBase.prototype.decode = function(n, b) {
-    var i, k, len, negtive, num, v, _i, _len;
+    var i, m, ret, sign;
     if (b == null) {
       b = this.MAX_BASE;
     }
     if (!(isNum(b) && b <= this.MAX_BASE && b > 1)) {
       return n;
     }
-    num = 0;
-    n = ("" + n).split('');
-    if (n[0] === '-') {
-      negtive = true;
-      n.shift();
+    n = ("" + n).split('').reverse();
+    sign = '';
+    if (n[n.length - 1] === '-') {
+      sign = '-';
+      n.pop();
     }
-    len = n.length;
-    for (k = _i = 0, _len = n.length; _i < _len; k = ++_i) {
-      v = n[k];
-      i = this.BASE.indexOf(v);
+    ret = '0';
+    while (m = n.pop()) {
+      i = this.BASE.indexOf(m);
       if (i === -1) {
-        throw new TypeError("unexpected character <" + v + "> found");
+        throw new TypeError("unexpected character <" + m + "> found");
       }
-      num += i * Math.pow(b, len - 1 - k);
+      if (i >= b) {
+        throw new TypeError("<" + m + "> is out of the base limit");
+      }
+      ret = add(multiply(ret, b), i);
     }
-    if (negtive) {
-      num = -num;
-    }
-    return num;
+    return sign + ret;
   };
 
   return NumBase;
