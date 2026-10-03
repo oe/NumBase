@@ -22,6 +22,12 @@ function command(args) {
     const decimal = '900719925474099312345678901234567890';
     const base = new Constructor();
     assert.equal(base.decode(base.encode(decimal)), decimal);
+    assert.ok(Object.isFrozen(base.BASE));
+    assert.equal(Reflect.set(base, 'MAX_BASE', 2), false);
+    assert.equal(Reflect.set(base.BASE, '0', 'x'), false);
+    assert.equal(Reflect.set(base, 'BASE', ['0', '1']), false);
+    assert.equal(base.MAX_BASE, 62);
+    assert.equal(base.BASE[0], '0');
     assert.equal(new (require(root + '/dist/numbase'))().encode('10'), 'a');
     const esm = await import(pathToFileURL(root + '/dist/numbase.mjs'));
     assert.equal(new esm.default().decode('a'), '10');

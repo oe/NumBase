@@ -4,8 +4,8 @@ const encoded: string = base.encode('9007199254740993');
 const decoded: string = base.decode(encoded);
 const numeric: string = base.encode(42);
 const bigint: string = base.encode(42n);
-base.BASE = ['0', '1'];
-base.MAX_BASE = 2;
+const alphabet: readonly string[] = base.BASE;
+const radix: number = base.MAX_BASE;
 const emoji = new NumBase('😀😁😂😃', { unicode: true });
 const converted: string = base.convert('f', emoji, { sourceRadix: 16, targetRadix: 4 });
 // @ts-expect-error alphabet must be a string
@@ -30,3 +30,10 @@ base.convert('f', {});
 base.convert('f', emoji, { targetRadix: '4' });
 // @ts-expect-error Unicode mode must be boolean
 new NumBase('01', { unicode: 'true' });
+
+// @ts-expect-error alphabet entries are readonly
+base.BASE[0] = 'x';
+// @ts-expect-error alphabet cannot be replaced
+base.BASE = ['0', '1'];
+// @ts-expect-error default radix is fixed by the alphabet
+base.MAX_BASE = 2;

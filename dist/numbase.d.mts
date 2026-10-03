@@ -10,10 +10,11 @@ interface ConversionTarget {
     encode(value: string, radix?: number): string;
 }
 export default class NumBase {
-    BASE: string[];
-    MAX_BASE: number;
+    readonly BASE: readonly string[];
+    readonly MAX_BASE: number;
     private readonly unicode;
-    private validatedAlphabet;
+    private readonly digitIndexes;
+    private readonly nativeRadixLimit;
     constructor(charList?: string, options?: NumBaseOptions);
     /** Encode an exact integer, rejecting unsafe Numbers and invalid input. */
     encode(number: string | number | bigint, radix?: number): string;

@@ -60,7 +60,7 @@ const hexCodes = codes.map(code => base62.convert(code, hexadecimal));
 // ['ffffffffffffffff', 'ffffffffffffffffffffffffffffffff']
 ```
 
-Create instances outside the loop to reuse configuration and validation snapshots. Operations are synchronous; `Promise.all` does not parallelize CPU work. Keep large integer IDs as strings in JSON as well.
+Create instances outside the loop to reuse configuration and the symbol-to-digit lookup. Operations are synchronous; `Promise.all` does not parallelize CPU work. Keep large integer IDs as strings in JSON as well.
 
 ## API
 
@@ -70,19 +70,19 @@ Create instances outside the loop to reuse configuration and validation snapshot
 | `encode(decimal, radix?)` | Accept a decimal integer string, safe integer Number, or bigint. Return encoded digits as a string or throw. |
 | `decode(encoded, radix?)` | Accept a nonempty encoded integer string. Return its exact decimal value as a string or throw. |
 | `convert(encoded, target, { sourceRadix?, targetRadix? }?)` | Convert to another alphabet using the same validation on both sides. |
-| `BASE` / `MAX_BASE` | Public alphabet array and default radix. Changes are checked before conversion. |
+| `BASE` / `MAX_BASE` | Readonly alphabet array and its length. Fixed at construction. |
 
-Omit the radix to use `MAX_BASE`. An explicit radix must be a numeric integer from 2 through `MAX_BASE` and selects the first `radix` symbols. `MAX_BASE` must be an integer from 2 through `BASE.length`.
+Omit the radix to use the full alphabet. An explicit radix must be a numeric integer from 2 through `MAX_BASE` and selects the first `radix` symbols. To use a smaller radix, pass it to the operation; to change the alphabet, create a new instance.
 
-Encoding rejects unsafe/fractional/non-finite Numbers, coercible objects, and malformed decimal strings (whitespace, `+`, decimals, exponents). Decoding rejects empty/sign-only input, nonstrings, unknown symbols, and digits outside the selected radix. Invalid input or alphabets throw `TypeError`; invalid radices or `MAX_BASE` throw `RangeError`. There is no input passthrough or automatic coercion.
+Encoding rejects unsafe/fractional/non-finite Numbers, coercible objects, and malformed decimal strings (whitespace, `+`, decimals, exponents). Decoding rejects empty/sign-only input, nonstrings, unknown symbols, and digits outside the selected radix. Invalid input or alphabets throw `TypeError`; invalid radices throw `RangeError`. There is no input passthrough or automatic coercion.
 
 Negative integers use a leading `-`. Leading zeros are accepted and normalized, and string negative zero stays signed: `encode('-000')` gives `'-0'`. Number `-0` and bigint zero encode as ordinary zero.
 
-Each alphabet entry must be one symbol in the selected character mode. Calls compare `BASE` contents with a validated snapshot: replacements and in-place edits trigger full validation; unchanged alphabets avoid rebuilding the duplicate-check table. Content comparison remains proportional to alphabet length. Radices and `MAX_BASE` are checked every time.
+The alphabet is validated once at construction, then frozen. `BASE` and `MAX_BASE` cannot be replaced or modified. A fixed symbol-to-digit lookup is reused by decoding; conversions do not scan or revalidate the alphabet.
 
 ## Alphabet recipes
 
-NumBase uses **0–9, a–z, A–Z** for default Base62, matching its published versions. Digits are case-sensitive: `a` represents 10 and `A` represents 36. Valid encodings retain this order in 1.0.0.
+NumBase uses **0–9, a–z, A–Z** for default Base62, matching its published versions. Digits are case-sensitive: `a` represents 10 and `A` represents 36. This refactor preserves the same digit order.
 
 | Integer representation | Alphabet, in digit-value order |
 | --- | --- |
@@ -145,15 +145,28 @@ For existing CommonJS projects, `const NumBase = require('numbase')` remains sup
 
 For browser scripts, `dist/numbase.min.js` exposes `window.NumBase`. AMD/CMD loaders and deep imports such as `numbase/dist/numbase` remain supported. Existing JavaScript entries retain ES5 syntax; BigInt is optional at runtime.
 
-## Migrating from 0.x
+## Migrating from 0.x or 1.0.0
 
-1.0.0 deliberately replaces permissive conversion with one safe API. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes.
+The current development version uses fixed instance configuration. The safe conversion behavior introduced in 1.0.0 remains. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes.
+
+From either **0.x or 1.0.0**, stop modifying `BASE` or `MAX_BASE`. Create a new instance for a different alphabet; pass a radix to `encode()` / `decode()` or conversion options for a smaller base. Read access remains available.
+
+```js
+import NumBase from 'numbase';
+
+const base62 = new NumBase();
+base62.encode('10', 4); // '22'; no MAX_BASE assignment needed
+const hexadecimal = new NumBase('0123456789abcdef'); // a separate alphabet
+```
+
+For **0.x** users, the input-validation changes introduced in 1.0.0 also apply:
 
 - Replace numeric literals outside the safe integer range with decimal strings or bigint.
 - Replace string/null radices with numbers, or omit the radix for the default.
 - Validate or catch invalid input: methods now throw instead of returning it unchanged. `decode('')` and `decode('-')` no longer mean zero.
 - Omit the alphabet for the default; empty/null, one-symbol, duplicate, and sign-conflicting alphabets now throw.
-- `encodeStrict()` / `decodeStrict()` existed only in the unpublished maintenance branch. Use `encode()` / `decode()`; there is no separate strict mode.
+
+`encodeStrict()` / `decodeStrict()` existed only in the unpublished maintenance branch. Use `encode()` / `decode()`; there is no separate strict mode.
 
 Valid integer encodings, default Base62 order, UTF-16 mode, signs, string negative zero, and leading-zero normalization remain stable.
 

@@ -12,3 +12,10 @@ const reverse: string = emoji.convert(converted, hexadecimal);
 const strict: string = emoji.encode(42);
 // @ts-expect-error strict Unicode decoding requires a string
 emoji.decode(42);
+
+// @ts-expect-error alphabet entries are readonly
+base.BASE[0] = 'x';
+// @ts-expect-error alphabet cannot be replaced
+base.BASE = ['0', '1'];
+// @ts-expect-error default radix is fixed by the alphabet
+base.MAX_BASE = 2;
