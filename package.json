@@ -1,7 +1,7 @@
 {
   "name": "numbase",
   "version": "1.1.0",
-  "description": "Precision-safe decimal integer and Base62 conversion with custom alphabets. Zero runtime dependencies.",
+  "description": "Precision-safe integer conversion in any radix with custom alphabets. Zero runtime dependencies.",
   "main": "dist/numbase.min.js",
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "big-number",
     "base-conversion",
     "radix",
+    "arbitrary-radix",
     "base62",
     "custom-alphabet",
     "bigint",

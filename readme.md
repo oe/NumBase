@@ -1,6 +1,8 @@
 # NumBase
 
-Precision-safe conversion between decimal integers and custom radix alphabets. Turn a large database ID into a compact Base62 code, recover its exact decimal value, or convert between alphabets. Zero runtime dependencies.
+Precision-safe integer conversion in any radix from 2 upward, using custom digit alphabets. Encode exact decimal integers, decode them back, or convert between alphabets and radices. Zero runtime dependencies.
+
+**Base62 is the default alphabet.** The default instance supports radices 2–62; supply a longer alphabet to use higher radices. Each radix needs that many distinct symbols, listed in digit-value order.
 
 ## Quick start
 
@@ -12,15 +14,37 @@ npm install numbase
 ```js
 import NumBase from 'numbase';
 
-const base62 = new NumBase(); // digit order: 0–9, a–z, A–Z
+const base = new NumBase(); // default alphabet: 0–9, a–z, A–Z
+base.encode(255, 2); // '11111111'
+base.encode(255, 16); // 'ff'
+base.decode('ff', 16); // '255'
+
 const id = '18446744073709551615'; // keep database IDs as decimal strings
-const code = base62.encode(id); // 'lYGhA16ahyf'
-base62.decode(code); // '18446744073709551615'
+const code = base.encode(id); // 'lYGhA16ahyf'; omitted radix uses all 62 symbols
+base.decode(code); // '18446744073709551615'
 ```
 
 Both methods return a string or throw. `encode()` accepts decimal strings, safe integer Numbers, and bigint. It rejects unsafe Numbers: the literal `9007199254740993` is already rounded before any library receives it. Pass `'9007199254740993'` or `9007199254740993n` instead.
 
 ## Examples
+
+### Radices above 62
+
+A custom alphabet defines its own maximum radix. For example, 100 distinct Chinese characters provide a Base100 alphabet:
+
+```js
+import NumBase from 'numbase';
+
+const alphabet = Array.from({ length: 100 }, (_, i) =>
+  String.fromCharCode(0x4e00 + i)
+).join('');
+const base100 = new NumBase(alphabet);
+base100.MAX_BASE; // 100
+const code = base100.encode('18446744073709551615');
+base100.decode(code); // '18446744073709551615'
+```
+
+Radices are integers from 2 through the chosen alphabet's length. Omit the radix to use the whole alphabet, or pass a smaller radix to use its first symbols.
 
 ### Readable integer codes
 
@@ -33,7 +57,7 @@ readable.decode('FZZZZZZZZZZZZ'); // '18446744073709551615'
 readable.encode(9007199254740993); // throws TypeError: unsafe Number
 ```
 
-### Convert hexadecimal integers to Base62
+### Convert between alphabets and radices
 
 ```js
 import NumBase from 'numbase';
@@ -72,7 +96,7 @@ Create instances outside the loop to reuse configuration and the symbol-to-digit
 | `convert(encoded, target, { sourceRadix?, targetRadix? }?)` | Convert to another alphabet using the same validation on both sides. |
 | `BASE` / `MAX_BASE` | Readonly alphabet array and its length. Fixed at construction. |
 
-Omit the radix to use the full alphabet. An explicit radix must be a numeric integer from 2 through `MAX_BASE` and selects the first `radix` symbols. To use a smaller radix, pass it to the operation; to change the alphabet, create a new instance.
+There is no fixed Base62 limit: `MAX_BASE` is the length of the selected alphabet. Omit the radix to use the full alphabet. An explicit radix must be a numeric integer from 2 through `MAX_BASE` and selects the first `radix` symbols. To use a smaller radix, pass it to the operation; to change the alphabet, create a new instance.
 
 Encoding rejects unsafe/fractional/non-finite Numbers, coercible objects, and malformed decimal strings (whitespace, `+`, decimals, exponents). Decoding rejects empty/sign-only input, nonstrings, unknown symbols, and digits outside the selected radix. Invalid input or alphabets throw `TypeError`; invalid radices throw `RangeError`. There is no input passthrough or automatic coercion.
 
@@ -82,7 +106,7 @@ The alphabet is validated once at construction, then frozen. `BASE` and `MAX_BAS
 
 ## Alphabet recipes
 
-NumBase uses **0–9, a–z, A–Z** for default Base62, matching its published versions. Digits are case-sensitive: `a` represents 10 and `A` represents 36. This refactor preserves the same digit order.
+NumBase uses **0–9, a–z, A–Z** for default Base62, matching its published versions. Digits are case-sensitive: `a` represents 10 and `A` represents 36. The default digit order remains stable across versions.
 
 | Integer representation | Alphabet, in digit-value order |
 | --- | --- |
@@ -114,7 +138,7 @@ The mode is fixed at construction. Unicode mode rejects unpaired surrogates and 
 | Need | Suitable choice |
 | --- | --- |
 | Standard radix 2–36 output in a modern runtime | Native `BigInt(value).toString(radix)` usually suffices. |
-| Exact decimal strings, custom alphabets, Base62, or signed conversion | NumBase. |
+| Exact decimal strings, custom alphabets, radices above 36, or signed conversion | NumBase. |
 | Arithmetic beyond representation conversion | A general-purpose big-integer library. |
 | Bytes or arbitrary text with leading-zero preservation | A byte codec or relevant standard encoding. |
 
