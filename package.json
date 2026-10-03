@@ -1,7 +1,7 @@
 {
   "name": "numbase",
   "version": "1.1.0",
-  "description": "Precision-safe integer conversion in any radix with custom alphabets. Zero runtime dependencies.",
+  "description": "Exact integer conversion in any radix. Choose your own symbol for each digit. Zero runtime dependencies.",
   "main": "dist/numbase.min.js",
   "repository": {
     "type": "git",

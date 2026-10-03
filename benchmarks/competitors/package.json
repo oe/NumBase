@@ -1,0 +1,14 @@
+{
+  "name": "numbase-competitor-benchmarks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node compare.mjs"
+  },
+  "devDependencies": {
+    "@sindresorhus/base62": "1.0.0",
+    "base-x": "5.0.1",
+    "big-integer": "1.6.52"
+  },
+  "packageManager": "pnpm@12.8.1"
+}

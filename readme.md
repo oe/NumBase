@@ -1,6 +1,8 @@
 # NumBase
 
-Precision-safe integer conversion in any radix from 2 upward, using custom digit alphabets. Encode exact decimal integers, decode them back, or convert between alphabets and radices. Zero runtime dependencies.
+**Choose any radix ≥2 and define the symbol for each digit.** NumBase converts exact integers using your alphabet: the first symbol represents 0, the next represents 1, and so on. Use letters, punctuation, Chinese characters, or Unicode code points to define your own integer representation.
+
+Encode decimal strings, safe integer Numbers, or bigint; decode to exact decimal strings; or convert between your alphabets. Large integer precision is preserved. Zero runtime dependencies.
 
 **Base62 is the default alphabet.** The default instance supports radices 2–62; supply a longer alphabet to use higher radices. Each radix needs that many distinct symbols, listed in digit-value order.
 
@@ -27,6 +29,21 @@ base.decode(code); // '18446744073709551615'
 Both methods return a string or throw. `encode()` accepts decimal strings, safe integer Numbers, and bigint. It rejects unsafe Numbers: the literal `9007199254740993` is already rounded before any library receives it. Pass `'9007199254740993'` or `9007199254740993n` instead.
 
 ## Examples
+
+### Define your own digit symbols
+
+The order of your alphabet assigns each symbol its value. This three-symbol alphabet defines Base3 with `猫 = 0`, `狗 = 1`, and `鱼 = 2`:
+
+```js
+import NumBase from 'numbase';
+
+const custom = new NumBase('猫狗鱼');
+custom.encode(5); // '狗鱼': 1 × 3 + 2
+custom.decode('狗鱼'); // '5'
+custom.encode(5, 2); // '狗猫狗': only 猫 and 狗 are used
+```
+
+Each symbol must be unique and `-` is reserved for negative integers. Use `{ unicode: true }` for supplementary characters such as emoji.
 
 ### Radices above 62
 
@@ -133,16 +150,37 @@ emoji.decode('😁😂😃'); // '27'
 
 The mode is fixed at construction. Unicode mode rejects unpaired surrogates and counts code points; it does not normalize text or group grapheme clusters, flags, skin-tone sequences, or ZWJ emoji. `🇨🇳` contains two digits. Its ES5-compatible scanner needs no iterator or `Array.from` polyfill.
 
-## When to use NumBase
+## Compare with alternatives
 
-| Need | Suitable choice |
-| --- | --- |
-| Standard radix 2–36 output in a modern runtime | Native `BigInt(value).toString(radix)` usually suffices. |
-| Exact decimal strings, custom alphabets, radices above 36, or signed conversion | NumBase. |
-| Arithmetic beyond representation conversion | A general-purpose big-integer library. |
-| Bytes or arbitrary text with leading-zero preservation | A byte codec or relevant standard encoding. |
+Custom digit alphabets are also available in other libraries. NumBase combines them with arbitrary radices, exact decimal-string conversion, signed integers and opt-in Unicode code points in three methods: `encode`, `decode`, and `convert`.
 
-NumBase converts integer representations. It does not generate IDs, encrypt values, or encode arbitrary text losslessly. Alphabet order determines output, leading zeros normalize, and `-` denotes a negative sign.
+| Capability | NumBase 1.1.0 | @sindresorhus/base62 1.0.0 | big-integer 1.6.52 | base-x 5.0.1 |
+| --- | --- | --- | --- | --- |
+| Radix and DIY digit symbols | Any integer radix ≥2, up to your alphabet length | DIY symbols, exactly 62 characters | Arbitrary radices and custom alphabets; also special bases and `<digit>` notation | Custom byte-range symbols; alphabet length <255 |
+| Integer input/output | Decimal strings, safe Numbers, bigint → digits; digits → decimal strings | Number/bigint integer APIs; non-negative values | Big-integer objects, parsing, formatting and arithmetic | Byte arrays ↔ encoded strings |
+| Negative integers | Yes | No | Yes | Byte codec |
+| Emoji as complete digit symbols | Opt-in Unicode code points | No | UTF-16 code units | Byte-range characters |
+| Reject unsafe Number inputs | Yes | No; use its bigint API for large values | No; use exact strings | Not an integer API |
+| Bytes/text encoding or arithmetic | Integer representation conversion | Bytes and text APIs | Arithmetic | Bytes; preserves leading zero bytes |
+
+For standard digit alphabets in radices 2–36, native `BigInt` parsing/formatting may suffice and is faster in our hexadecimal measurements. NumBase does not generate IDs, encrypt values, or encode arbitrary text losslessly. Alphabet order determines output, leading zeros normalize, and `-` denotes a negative sign.
+
+### Measured integer conversion performance
+
+The following is one Linux x64 / Intel Xeon Platinum 8573C run on Node 24.19.0. Numbers are **median microseconds per operation; lower is faster**. All codecs reuse instances and the same lowercase-first Base62 alphabet. Encoding includes decimal-string parsing; decoding includes decimal-string output. There are 16 positive inputs per dataset and 15 samples.
+
+| Input | Operation | NumBase | @sindresorhus/base62 | big-integer |
+| --- | --- | ---: | ---: | ---: |
+| 64-bit integers | encode | 1.532 | 1.134 | 3.670 |
+| 64-bit integers | decode | 0.334 | 0.985 | 5.444 |
+| 128-bit integers | encode | 3.124 | 2.293 | 6.458 |
+| 128-bit integers | decode | 1.475 | 2.324 | 7.558 |
+| 1,000 decimal digits | encode | 280.843 | 260.558 | 351.803 |
+| 1,000 decimal digits | decode | 114.769 | 119.386 | 196.794 |
+
+NumBase was faster at decoding the sampled short IDs; @sindresorhus/base62 was faster at encoding. Long-input decoding was similar. These measurements do not establish a universal winner. base-x has different byte/leading-zero semantics, so it is not timed against integer APIs.
+
+See [the full comparison](https://github.com/oe/NumBase/tree/master/benchmarks/competitors) for exact adapters, pinned dependencies, feature sources, limitations, Node 22 results, native hexadecimal results, raw samples and reproduction commands.
 
 ## Modules and TypeScript
 
