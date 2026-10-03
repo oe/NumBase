@@ -1,14 +1,4 @@
 /*! numbase v1.0.0 | MIT | Saiya */
-(function (root, factory) {
-  if (typeof define === 'function' && (define.amd || define.cmd)) {
-    define(function () { return factory(); });
-  } else if (typeof exports === 'object') {
-    module.exports = factory();
-  } else {
-    root.NumBase = factory();
-  }
-}(typeof window !== 'undefined' ? window : this, function () {
-  var module = { exports: {} };
 //#region src/numbase.ts
 /** Convert decimal integers and strings in a custom radix without Number rounding. */
 var DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -194,7 +184,4 @@ var NumBase = function() {
 	return NumBase;
 }();
 //#endregion
-module.exports = NumBase;
-
-  return module.exports;
-}));
+export { NumBase as default };

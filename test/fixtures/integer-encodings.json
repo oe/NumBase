@@ -1,0 +1,105 @@
+{
+  "alphabets": {
+    "base62": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "base58": "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",
+    "base32": "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+  },
+  "vectors": [
+    {
+      "decimal": "0",
+      "base62": "0",
+      "base58": "1",
+      "base32": "0"
+    },
+    {
+      "decimal": "-0",
+      "base62": "-0",
+      "base58": "-1",
+      "base32": "-0"
+    },
+    {
+      "decimal": "1",
+      "base62": "1",
+      "base58": "2",
+      "base32": "1"
+    },
+    {
+      "decimal": "-1",
+      "base62": "-1",
+      "base58": "-2",
+      "base32": "-1"
+    },
+    {
+      "decimal": "9",
+      "base62": "9",
+      "base58": "A",
+      "base32": "9"
+    },
+    {
+      "decimal": "10",
+      "base62": "a",
+      "base58": "B",
+      "base32": "A"
+    },
+    {
+      "decimal": "35",
+      "base62": "z",
+      "base58": "c",
+      "base32": "13"
+    },
+    {
+      "decimal": "36",
+      "base62": "A",
+      "base58": "d",
+      "base32": "14"
+    },
+    {
+      "decimal": "61",
+      "base62": "Z",
+      "base58": "24",
+      "base32": "1X"
+    },
+    {
+      "decimal": "62",
+      "base62": "10",
+      "base58": "25",
+      "base32": "1Y"
+    },
+    {
+      "decimal": "63",
+      "base62": "11",
+      "base58": "26",
+      "base32": "1Z"
+    },
+    {
+      "decimal": "1337",
+      "base62": "lz",
+      "base58": "Q4",
+      "base32": "19S"
+    },
+    {
+      "decimal": "-1337",
+      "base62": "-lz",
+      "base58": "-Q4",
+      "base32": "-19S"
+    },
+    {
+      "decimal": "9007199254740993",
+      "base62": "FfGNdXsE9",
+      "base58": "2DLNrMSKui",
+      "base32": "80000000001"
+    },
+    {
+      "decimal": "18446744073709551615",
+      "base62": "lYGhA16ahyf",
+      "base58": "jpXCZedGfVQ",
+      "base32": "FZZZZZZZZZZZZ"
+    },
+    {
+      "decimal": "340282366920938463463374607431768211455",
+      "base62": "7N42dgm5tFLK9N8MT7fHC7",
+      "base58": "YcVfxkQb6JRzqk5kF2tNLv",
+      "base32": "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"
+    }
+  ]
+}
