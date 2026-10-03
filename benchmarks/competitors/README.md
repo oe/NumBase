@@ -104,7 +104,7 @@ npx --yes node@22 benchmarks/competitors/compare.mjs --candidate > /tmp/numbase-
 node benchmarks/competitors/compare.mjs --candidate --materialize > /tmp/numbase-candidate-materialized.json
 ```
 
-The following Base62 encoding tables use the same method and inputs as above, timing the published baseline and candidate together. Units are median microseconds per operation. The measurements were recorded before publication: candidate metadata retains packageVersion 1.1.0 and its historical unreleased status. Its distribution SHA-256 matches the implementation released in 1.1.1. Full JSON also retains decoding, hexadecimal and big-integer results.
+The following Base62 encoding tables use the same method and inputs as above, timing the published baseline and candidate together. Units are median microseconds per operation. The measurements were recorded before publication: candidate metadata retains packageVersion 1.1.0 and its historical unreleased status. The recorded SHA-256 identifies the pre-release distribution. Publication updates only the version banner; the executable content is identical to 1.1.1. Full JSON also retains decoding, hexadecimal and big-integer results.
 
 ### Node 24.19.0
 
@@ -140,7 +140,7 @@ The candidate encoded these Base62 datasets faster than both the published basel
 
 These results support an encoding improvement for the measured workloads. Base62 decoding uses the same accumulation algorithm as published 1.1.0; timing differences are not evidence of a decoding optimization there. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
 
-The candidate passes 36 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. Additional radix 63–1024 cases check exact large integers in both native and no-BigInt environments. The minified bundle grows from 4,162 to 4,748 bytes (gzip: 1,707 to 1,938 bytes), with no new runtime dependency or per-instance cache.
+The candidate passes 36 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. Additional radix 63–1024 cases check exact large integers in both native and no-BigInt environments. The minified bundle grows from 4,162 to 4,748 bytes (gzip: 1,707 to 1,939 bytes), with no new runtime dependency or per-instance cache.
 
 ### Native hexadecimal decoding
 

@@ -1,4 +1,4 @@
-/*! numbase v1.1.0 | MIT | Saiya */
+/*! numbase v1.1.1 | MIT | Saiya */
 //#region src/numbase.ts
 /** Convert decimal integers and strings in a custom radix without Number rounding. */
 var DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
