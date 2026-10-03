@@ -46,6 +46,52 @@ hexadecimal.convert('1010', base62, { sourceRadix: 2, targetRadix: 8 }); // '12'
 
 `convert()` composes strict decoding and encoding through an exact decimal string. Omitted radices use each instance's default. It preserves negative signs and normalizes leading zeros; CommonJS and ESM instances interoperate.
 
+### Batch conversion: reuse instances
+
+```js
+const base62 = new NumBase();
+const ids = ['18446744073709551615', '340282366920938463463374607431768211455'];
+const codes = ids.map(id => base62.encodeStrict(id));
+const recovered = codes.map(code => base62.decodeStrict(code)); // original IDs
+
+const hexadecimal = new NumBase('0123456789abcdef');
+const hexCodes = codes.map(code => base62.convert(code, hexadecimal));
+// ['ffffffffffffffff', 'ffffffffffffffffffffffffffffffff']
+```
+
+Create instances outside the loop to reuse configuration and validation snapshots. Each operation is synchronous; `Promise.all` does not parallelize CPU work. Keep database IDs as strings, including in JSON, so they are not rounded before conversion.
+
+## Alphabet recipes and Base62 order
+
+Base62 does not have one universally required digit order. Both lowercase-first and uppercase-first alphabets are used by existing libraries: [base-x documents lowercase first](https://github.com/cryptocoinjs/base-x#alphabets), while [@sindresorhus/base62 uses uppercase first](https://github.com/sindresorhus/base62#api). Choose the exact order expected by the system you exchange values with.
+
+| Integer representation | Alphabet, in digit-value order |
+| --- | --- |
+| Base62, lowercase first (**NumBase default**) | `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ` |
+| Base62, uppercase first | `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz` |
+| Base58, Bitcoin-style digits | `123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz` |
+| Base32, Crockford-style digits | `0123456789ABCDEFGHJKMNPQRSTVWXYZ` |
+
+Pass a recipe to the existing constructor; no additional preset API is needed:
+
+```js
+const lowerFirst = new NumBase();
+const upperFirst = new NumBase('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+lowerFirst.encodeStrict('10'); // 'a'
+upperFirst.encodeStrict('10'); // 'A'
+lowerFirst.decodeStrict('A'); // '36'
+upperFirst.decodeStrict('A'); // '10'
+
+// Re-encode an existing value instead of changing its alphabet label.
+lowerFirst.convert('lYGhA16ahyf', upperFirst); // 'LygHa16AHYF'
+```
+
+The default remains lowercase first, preserving encodings produced by published NumBase versions. An encoded string cannot reliably identify its own alphabet order. Store the full alphabet (or an explicit versioned identifier), radix, and Unicode mode with persisted values. Changing alphabet order requires decoding with the old configuration and encoding with the new one.
+
+These recipes specify **integer digits**, not complete byte/text codecs. The Base58 recipe normalizes integer leading zeros and does not implement Base58Check or preserve leading zero bytes. The Base32 recipe does not add case folding, ambiguous-character aliases, hyphen grouping, or Crockford check symbols. It is not RFC 4648 Base32. Interoperability requires matching both alphabet order and conversion semantics.
+
+For supported integer inputs, a fixed alphabet, radix, and character mode define a stable encoding across NumBase releases. Fixed input/output fixtures test both native arithmetic and the no-BigInt fallback, separately from round-trip tests, to protect persisted data compatibility. Leading zeros continue to normalize and string negative zero remains signed.
+
 ## When to use NumBase
 
 | Need | Suitable choice |

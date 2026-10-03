@@ -1,0 +1,122 @@
+{
+  "alphabets": {
+    "base62Lower": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "base62Upper": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    "base58": "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",
+    "base32": "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+  },
+  "vectors": [
+    {
+      "decimal": "0",
+      "base62Lower": "0",
+      "base62Upper": "0",
+      "base58": "1",
+      "base32": "0"
+    },
+    {
+      "decimal": "-0",
+      "base62Lower": "-0",
+      "base62Upper": "-0",
+      "base58": "-1",
+      "base32": "-0"
+    },
+    {
+      "decimal": "1",
+      "base62Lower": "1",
+      "base62Upper": "1",
+      "base58": "2",
+      "base32": "1"
+    },
+    {
+      "decimal": "-1",
+      "base62Lower": "-1",
+      "base62Upper": "-1",
+      "base58": "-2",
+      "base32": "-1"
+    },
+    {
+      "decimal": "9",
+      "base62Lower": "9",
+      "base62Upper": "9",
+      "base58": "A",
+      "base32": "9"
+    },
+    {
+      "decimal": "10",
+      "base62Lower": "a",
+      "base62Upper": "A",
+      "base58": "B",
+      "base32": "A"
+    },
+    {
+      "decimal": "35",
+      "base62Lower": "z",
+      "base62Upper": "Z",
+      "base58": "c",
+      "base32": "13"
+    },
+    {
+      "decimal": "36",
+      "base62Lower": "A",
+      "base62Upper": "a",
+      "base58": "d",
+      "base32": "14"
+    },
+    {
+      "decimal": "61",
+      "base62Lower": "Z",
+      "base62Upper": "z",
+      "base58": "24",
+      "base32": "1X"
+    },
+    {
+      "decimal": "62",
+      "base62Lower": "10",
+      "base62Upper": "10",
+      "base58": "25",
+      "base32": "1Y"
+    },
+    {
+      "decimal": "63",
+      "base62Lower": "11",
+      "base62Upper": "11",
+      "base58": "26",
+      "base32": "1Z"
+    },
+    {
+      "decimal": "1337",
+      "base62Lower": "lz",
+      "base62Upper": "LZ",
+      "base58": "Q4",
+      "base32": "19S"
+    },
+    {
+      "decimal": "-1337",
+      "base62Lower": "-lz",
+      "base62Upper": "-LZ",
+      "base58": "-Q4",
+      "base32": "-19S"
+    },
+    {
+      "decimal": "9007199254740993",
+      "base62Lower": "FfGNdXsE9",
+      "base62Upper": "fFgnDxSe9",
+      "base58": "2DLNrMSKui",
+      "base32": "80000000001"
+    },
+    {
+      "decimal": "18446744073709551615",
+      "base62Lower": "lYGhA16ahyf",
+      "base62Upper": "LygHa16AHYF",
+      "base58": "jpXCZedGfVQ",
+      "base32": "FZZZZZZZZZZZZ"
+    },
+    {
+      "decimal": "340282366920938463463374607431768211455",
+      "base62Lower": "7N42dgm5tFLK9N8MT7fHC7",
+      "base62Upper": "7n42DGM5Tflk9n8mt7Fhc7",
+      "base58": "YcVfxkQb6JRzqk5kF2tNLv",
+      "base32": "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"
+    }
+  ]
+}
