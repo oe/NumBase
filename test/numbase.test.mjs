@@ -1,11 +1,17 @@
-const assert = require('node:assert/strict');
-const { test } = require('node:test');
-const NumBase = require('..');
+import assert from 'node:assert/strict';
+import { test, vi, afterEach } from 'vitest';
+import NumBase from '../src/numbase.ts';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+afterEach(() => vi.unstubAllGlobals());
 const Legacy = require('./fixtures/numbase-0.1.1.cjs');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { execFileSync } = require('node:child_process');
 
 const huge = '9999999999999999999999999999999999999999999999999999999999999999';
 const encodedHuge = 'isFUl3RMFVGKeLAbPmHOAA86LLjpGwei1jXh';
@@ -124,9 +130,19 @@ test('preserves malformed decode errors, unusual alphabets, and mutable BASE', (
     for (const value of ['0', '1', '2', '10']) {
       assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
     }
-    for (const value of ['x', 'z', '1', 'a', 'c', 'bc', 'xxxxxxxx', 'cccccccc', 'zzzzzzzz']) {
+    for (const value of ['x', 'z', '1', 'a', 'c', 'bc', 'xxxxxxxx', 'cccccccc', 'zzzzzzzz', 'x'.repeat(32), 'c'.repeat(32)]) {
       assert.deepEqual(outcome(() => base.decode(value)), outcome(() => old.decode(value)));
     }
+  }
+});
+
+test('legacy encoding retains the distinct numeric and string coercion of objects', () => {
+  const base = new NumBase();
+  const old = new Legacy();
+  for (const representation of ['12\n', '12 ', '-12\n', '9007199254740993\n']) {
+    const value = { valueOf: () => 12, toString: () => representation };
+    assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
+    assert.throws(() => base.encodeStrict(value), TypeError);
   }
 });
 
@@ -167,8 +183,14 @@ test('retains CommonJS/deep import shape and supplies opt-in native ESM', async 
   }
   const { default: ESM } = await import(pathToFileURL(path.join(__dirname, '../dist/numbase.mjs')));
   assert.equal(new ESM().decode(encodedHuge), huge);
-  const namespace = await import(pathToFileURL(path.join(__dirname, '../dist/numbase.min.js')));
-  assert.equal(namespace.default, NumBase);
+  // Exercise native Node's module cache, rather than Vitest's transformed imports.
+  execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { createRequire } from 'node:module';
+    const require = createRequire(import.meta.url);
+    const namespace = await import('./dist/numbase.min.js');
+    assert.equal(namespace.default, require('./dist/numbase.min.js'));
+  `], { cwd: path.join(__dirname, '..'), stdio: 'pipe' });
 });
 
 test('legacy browser/CommonJS bundles retain ES5 syntax', () => {
@@ -218,5 +240,30 @@ test('native arithmetic and no-BigInt bundles preserve exact results and legacy 
     const encoded = referenceEncode(huge, Array.from('😀😁😂😃'), 4);
     assert.equal(emoji.encodeStrict(huge), encoded);
     assert.equal(emoji.decodeStrict(encoded), huge);
+  }
+});
+
+test('source fallback without BigInt matches exact native results for signed custom alphabets', () => {
+  const vectors = [];
+  for (const [alphabet, unicode] of [
+    ['0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', false],
+    ['中国上海市徐汇区', false],
+    ['😀😁😂😃', true],
+  ]) {
+    for (const decimal of ['0', '-0', '00000123', '-00000123', '9007199254740993', huge]) {
+      const base = new NumBase(alphabet, { unicode });
+      vectors.push({ alphabet, unicode, decimal, encoded: base.encodeStrict(decimal), decoded: base.decodeStrict(base.encodeStrict(decimal)) });
+    }
+  }
+  vi.stubGlobal('BigInt', undefined);
+  for (const { alphabet, unicode, decimal, encoded, decoded } of vectors) {
+    const base = new NumBase(alphabet, { unicode });
+    assert.equal(base.encodeStrict(decimal), encoded);
+    assert.equal(base.decodeStrict(encoded), decoded);
+  }
+  const base = new NumBase();
+  const old = new Legacy();
+  for (const value of ['12\n', '9007199254740993\n', '9007199254740993\r', '9007199254740993\u2028', '9007199254740993\u2029']) {
+    assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
   }
 });

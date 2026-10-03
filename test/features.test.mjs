@@ -1,6 +1,11 @@
-const assert = require('node:assert/strict');
-const { test } = require('node:test');
-const NumBase = require('..');
+import assert from 'node:assert/strict';
+import { test, vi, afterEach } from 'vitest';
+import NumBase from '../src/numbase.ts';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+afterEach(() => vi.unstubAllGlobals());
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 

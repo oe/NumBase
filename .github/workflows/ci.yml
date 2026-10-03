@@ -21,5 +21,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-node-${{ matrix.node }}
+          path: coverage/
+          retention-days: 7
       - name: Ensure the build is reproducible and does not bump versions
         run: git diff --exit-code -- package.json pnpm-lock.yaml dist

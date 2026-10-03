@@ -116,13 +116,18 @@ Use Node.js 22.12+ or 24 and pnpm 12.8.1:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm check     # build, runtime tests, consumer types, packed installation
+pnpm check     # build, coverage gates, consumer types, packed installation
+pnpm test      # run Vitest once
+pnpm test:watch # rerun tests while editing
+pnpm test:coverage # V8 coverage with HTML and LCOV reports
 pnpm bench     # published baseline, strict overhead, ID workloads, native reference
 # Compare against a previous build:
 pnpm bench /absolute/path/to/previous-numbase.cjs
 ```
 
-Vite builds strict TypeScript into readable/minified UMD, native ESM, and generated declarations. A small distribution plugin preserves ES5 syntax and the historical loader wrapper. Builds do not change the version. CI checks Node 22/24 and reproducible artifacts. Tests use an independent BigInt oracle, the published 0.1.1 implementation, and bundles with BigInt disabled.
+Vite builds strict TypeScript into readable/minified UMD, native ESM, and generated declarations. A small distribution plugin preserves ES5 syntax and the historical loader wrapper. Builds do not change the version. Vitest tests the TypeScript source against an independent BigInt oracle and the published 0.1.1 implementation; separate checks exercise the distribution bundles, including with BigInt disabled.
+
+V8 coverage includes every `src/**/*.ts` file and requires at least 95% statements, branches, and lines and 100% functions **per file**. Both Node 22/24 CI and prepublish checks enforce these gates; CI also saves HTML/LCOV coverage reports as artifacts. Run `pnpm test:coverage` and open `coverage/index.html` locally. Coverage is a regression guard, not proof that every behavior is correct. The historical oversized-alphabet error remains uncovered: a unique code-unit/code-point alphabet cannot reach that bound; tests do not mock arithmetic just to exercise it.
 
 Benchmarks assert equal outputs, alternate comparison order over seven paired samples, and report median milliseconds per operation. The native reference covers positive Base62 integers with the same alphabet, without NumBase's input validation or compatibility behavior. Results depend on the engine and workload, and do not measure application-level speedups.
 

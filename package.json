@@ -8,10 +8,12 @@
     "url": "git+https://github.com/oe/NumBase.git"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "5.0.3",
     "acorn": "^8.18.0",
     "terser": "^5.51.2",
     "typescript": "^5.9.3",
-    "vite": "^8.3.2"
+    "vite": "^8.3.2",
+    "vitest": "5.0.3"
   },
   "author": {
     "company": "evecalm.com",
@@ -41,9 +43,11 @@
   ],
   "scripts": {
     "build": "vite build && pnpm build:types",
-    "test": "node --test test/*.test.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && pnpm typecheck:consumers",
-    "check": "pnpm build && pnpm test && pnpm typecheck:consumers && pnpm test:package",
+    "check": "pnpm build && pnpm test:coverage && pnpm typecheck:consumers && pnpm test:package",
     "bench": "node scripts/benchmark.cjs",
     "prepublishOnly": "pnpm check",
     "test:package": "node scripts/test-package.cjs",
