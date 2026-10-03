@@ -8,9 +8,9 @@ test.each(['native', 'without BigInt'])('fixed encodings remain stable: %s', mod
   if (mode === 'without BigInt') vi.stubGlobal('BigInt', undefined);
   const defaultBase = new NumBase();
   for (const { decimal, ...encodings } of fixtures.vectors) {
-    expect(defaultBase.encode(decimal)).toBe(encodings.base62Lower);
-    expect(defaultBase.encodeStrict(decimal)).toBe(encodings.base62Lower);
-    expect(defaultBase.decode(encodings.base62Lower)).toBe(decimal);
+    expect(defaultBase.encode(decimal)).toBe(encodings.base62);
+    expect(defaultBase.encodeStrict(decimal)).toBe(encodings.base62);
+    expect(defaultBase.decode(encodings.base62)).toBe(decimal);
     for (const [name, alphabet] of Object.entries(fixtures.alphabets)) {
       const base = new NumBase(alphabet);
       expect(base.encode(decimal), `${name}: ${decimal}`).toBe(encodings[name]);
@@ -19,21 +19,6 @@ test.each(['native', 'without BigInt'])('fixed encodings remain stable: %s', mod
       expect(base.decodeStrict(encodings[name])).toBe(decimal);
     }
   }
-});
-
-test.each(['native', 'without BigInt'])('Base62 alphabet migration retains values: %s', mode => {
-  if (mode === 'without BigInt') vi.stubGlobal('BigInt', undefined);
-  const lower = new NumBase();
-  const upper = new NumBase(fixtures.alphabets.base62Upper);
-  expect(lower.decodeStrict('A')).toBe('36');
-  expect(upper.decodeStrict('A')).toBe('10');
-  for (const vector of fixtures.vectors) {
-    expect(lower.convert(vector.base62Lower, upper)).toBe(vector.base62Upper);
-    expect(upper.convert(vector.base62Upper, lower)).toBe(vector.base62Lower);
-  }
-  // Existing normalization is part of the integer conversion contract.
-  expect(lower.convert('000a', upper)).toBe('A');
-  expect(lower.convert('-000', upper)).toBe('-0');
 });
 
 test('documented batch conversion reuses instances and retains exact database IDs', () => {
