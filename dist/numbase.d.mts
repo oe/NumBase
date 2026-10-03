@@ -20,6 +20,7 @@ export default class NumBase {
     encode(number: string | number | bigint, radix?: number): string;
     /** Decode nonempty alphabet digits to an exact decimal string. */
     decode(encoded: string, radix?: number): string;
+    private decodeNative;
     /** Convert between alphabets using exact decimal strings and strict validation. */
     convert(value: string, target: ConversionTarget, options?: ConvertOptions): string;
     private validateRadix;

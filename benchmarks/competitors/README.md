@@ -112,9 +112,9 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.398 | 0.673 | 1.035 |
-| 128-bit integers | 2.947 | 1.163 | 2.183 |
-| 1,000 decimal digits | 253.272 | 44.948 | 245.844 |
+| 64-bit integers | 1.526 | 0.664 | 1.145 |
+| 128-bit integers | 2.697 | 1.027 | 2.184 |
+| 1,000 decimal digits | 268.900 | 50.031 | 262.193 |
 
 ### Node 22.23.3
 
@@ -122,9 +122,9 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.503 | 0.658 | 1.120 |
-| 128-bit integers | 2.646 | 0.992 | 2.026 |
-| 1,000 decimal digits | 190.587 | 42.163 | 189.073 |
+| 64-bit integers | 1.458 | 0.653 | 1.084 |
+| 128-bit integers | 2.668 | 1.140 | 2.167 |
+| 1,000 decimal digits | 217.326 | 45.236 | 196.621 |
 
 ### Node 24.19.0, materialized output
 
@@ -132,15 +132,15 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.523 | 0.806 | 1.207 |
-| 128-bit integers | 2.611 | 1.307 | 2.347 |
-| 1,000 decimal digits | 250.701 | 47.852 | 250.391 |
+| 64-bit integers | 1.701 | 0.841 | 1.359 |
+| 128-bit integers | 3.054 | 1.478 | 2.499 |
+| 1,000 decimal digits | 264.500 | 51.442 | 268.919 |
 
 The candidate encoded these Base62 datasets faster than both the published baseline and @sindresorhus/base62 in both Node versions. The materialized run includes UTF-8 Buffer allocation for every result, so the benefit survives consuming the actual output bytes rather than only the string length. This extra allocation is specific to that experiment, not part of NumBase's API.
 
 These results support an encoding improvement for the measured workloads. Base62 decoding uses the same accumulation algorithm as published 1.1.0; timing differences are not evidence of a decoding optimization there. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
 
-The candidate passes 36 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. Additional radix 63–1024 cases check exact large integers in both native and no-BigInt environments. The minified bundle grows from 4,162 to 4,696 bytes (gzip: 1,707 to 1,918 bytes), with no new runtime dependency or per-instance cache.
+The candidate passes 36 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. Additional radix 63–1024 cases check exact large integers in both native and no-BigInt environments. The minified bundle grows from 4,162 to 4,748 bytes (gzip: 1,707 to 1,938 bytes), with no new runtime dependency or per-instance cache.
 
 ### Native hexadecimal decoding
 
@@ -148,11 +148,28 @@ The same fresh runs compare decimal-string output after hexadecimal parsing. Num
 
 | Runtime | Input | Published 1.1.0 | Unreleased candidate | Native BigInt |
 | --- | --- | ---: | ---: | ---: |
-| Node 24 | 64-bit integers | 0.564 | 0.519 | 0.165 |
-| Node 24 | 128-bit integers | 2.124 | 0.942 | 0.246 |
-| Node 24 | 1,000 decimal digits | 150.400 | 40.691 | 18.815 |
-| Node 22 | 64-bit integers | 0.622 | 0.524 | 0.151 |
-| Node 22 | 128-bit integers | 2.213 | 0.975 | 0.244 |
-| Node 22 | 1,000 decimal digits | 180.020 | 41.823 | 19.506 |
+| Node 24.19.0 | 64-bit integers | 0.615 | 0.507 | 0.174 |
+| Node 24.19.0 | 128-bit integers | 2.311 | 0.929 | 0.253 |
+| Node 24.19.0 | 1,000 decimal digits | 163.092 | 47.670 | 21.271 |
+| Node 22.23.3 | 64-bit integers | 0.652 | 0.514 | 0.165 |
+| Node 22.23.3 | 128-bit integers | 2.489 | 0.981 | 0.267 |
+| Node 22.23.3 | 1,000 decimal digits | 172.463 | 48.416 | 20.046 |
 
-For these 1,000-digit values, hexadecimal decoding is approximately 3.7–4.3× faster than published 1.1.0. Bare native BigInt is still approximately 2.1–2.2× faster than the candidate, reflecting the cost of strict alphabet validation and API handling. This is not a claim of zero overhead or equivalent validation contracts.
+For these 1,000-digit values, hexadecimal decoding is approximately 3.4–3.6× faster than published 1.1.0. Bare native BigInt is still approximately 2.2–2.4× faster than the candidate, reflecting the cost of strict alphabet validation and API handling. This is not a claim of zero overhead or equivalent validation contracts.
+
+### Small-input review control
+
+Candidate runs additionally include 16 deterministic safe integers `19901230 + i * 7919`, with 65,536 operations per sample. These guard the Number paths. Native parsing is kept in a separate internal method; the BigInt radix is constructed only when accumulation exceeds Number's safe range.
+
+| Runtime | Radix | Operation | Published 1.1.0 | Unreleased candidate |
+| --- | --- | --- | ---: | ---: |
+| Node 24.19.0 | 62 | encode | 0.292 | 0.177 |
+| Node 24.19.0 | 62 | decode | 0.097 | 0.097 |
+| Node 24.19.0 | 16 | encode | 0.366 | 0.217 |
+| Node 24.19.0 | 16 | decode | 0.180 | 0.199 |
+| Node 22.23.3 | 62 | encode | 0.298 | 0.161 |
+| Node 22.23.3 | 62 | decode | 0.103 | 0.101 |
+| Node 22.23.3 | 16 | encode | 0.376 | 0.209 |
+| Node 22.23.3 | 16 | decode | 0.180 | 0.174 |
+
+Small Base62 decoding remains approximately level with 1.1.0 in these full comparison runs. Short hexadecimal decoding varies between the runtimes; there is no claim that every short operation improves. The isolated review also tested short Base62 values with longer warm-up to catch a regression in the earlier inline native branch, which was fixed before release.

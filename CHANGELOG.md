@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep native parsing outside the general decode loop and construct the BigInt radix only when needed, avoiding a short-input performance regression. Add large DIY-radix regression cases and a reproducible small-input benchmark control.
+
 - Decode long binary/octal/hexadecimal inputs with native BigInt parsing after strict alphabet validation, translating custom symbols when needed. Preserve negative signs, signed zero and no-BigInt behavior.
 
 - Encode results by prepending complete alphabet symbols, avoiding the temporary digit array and reverse/join pass.

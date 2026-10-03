@@ -161,19 +161,9 @@ var NumBase = function() {
 			input = input.slice(1);
 		}
 		var symbols = this.unicode ? unicodeSymbols(input) : input;
-		var bigRadix = typeof BigInt === "function" ? BigInt(base) : void 0;
-		var nativePrefix = bigRadix !== void 0 && symbols.length > 15 ? base === 2 ? "0b" : base === 8 ? "0o" : base === 16 ? "0x" : "" : "";
-		if (nativePrefix) {
-			var digits = "";
-			for (var j = 0; j < symbols.length; j++) {
-				var character = symbols[j];
-				var digit = this.digitIndexes[character];
-				if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
-				if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
-				if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
-			}
-			return sign + String(BigInt(nativePrefix + (base <= this.nativeRadixLimit ? input : digits)));
-		}
+		var hasBigInt = typeof BigInt === "function";
+		var bigRadix;
+		if (symbols.length > 15 && (base === 2 || base === 8 || base === 16) && hasBigInt) return sign + this.decodeNative(input, symbols, base);
 		var integer = 0;
 		var large;
 		var result = "0";
@@ -182,16 +172,31 @@ var NumBase = function() {
 			var digit = this.digitIndexes[character];
 			if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
 			if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
-			if (bigRadix !== void 0) {
+			if (hasBigInt) {
 				if (large !== void 0) large = large * bigRadix + BigInt(digit);
 				else {
 					var next = integer * base + digit;
 					if (next <= 9007199254740991) integer = next;
-					else large = BigInt(integer) * bigRadix + BigInt(digit);
+					else {
+						bigRadix = BigInt(base);
+						large = BigInt(integer) * bigRadix + BigInt(digit);
+					}
 				}
 			} else result = multiplyAdd(result, base, digit);
 		}
-		return sign + (bigRadix === void 0 ? result : large === void 0 ? String(integer) : String(large));
+		return sign + (!hasBigInt ? result : large === void 0 ? String(integer) : String(large));
+	};
+	NumBase.prototype.decodeNative = function(input, symbols, base) {
+		var prefix = base === 2 ? "0b" : base === 8 ? "0o" : "0x";
+		var digits = "";
+		for (var j = 0; j < symbols.length; j++) {
+			var character = symbols[j];
+			var digit = this.digitIndexes[character];
+			if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
+			if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
+			if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
+		}
+		return String(BigInt(prefix + (base <= this.nativeRadixLimit ? input : digits)));
 	};
 	/** Convert between alphabets using exact decimal strings and strict validation. */
 	NumBase.prototype.convert = function(value, target, options) {

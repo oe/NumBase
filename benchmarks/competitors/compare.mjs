@@ -42,6 +42,13 @@ const datasets = [
   }), iterations: 128 },
 ];
 
+// A small-input control guards the paths that should not need BigInt arithmetic.
+if (includeCandidate) datasets.push({
+  name: 'small-safe-integers',
+  values: Array.from({ length: 16 }, (_, i) => String(19901230 + i * 7919)),
+  iterations: 65536,
+});
+
 // These assertions back the feature comparison, not byte/integer speed comparisons.
 const custom100 = Array.from({ length: 100 }, (_, i) => String.fromCharCode(0x4e00 + i)).join('');
 const base100 = new NumBase(custom100);

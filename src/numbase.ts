@@ -188,22 +188,12 @@ export default class NumBase {
       input = input.slice(1);
     }
     const symbols = this.unicode ? unicodeSymbols(input) : input;
-    const bigRadix = typeof BigInt === 'function' ? BigInt(base) : undefined;
+    const hasBigInt = typeof BigInt === 'function';
+    let bigRadix: bigint | undefined;
     // Native BigInt parsing accepts binary, octal and hexadecimal prefixes.
     // Keep short inputs on the Number path and validate every symbol ourselves.
-    const nativePrefix = bigRadix !== undefined && symbols.length > 15
-      ? base === 2 ? '0b' : base === 8 ? '0o' : base === 16 ? '0x' : ''
-      : '';
-    if (nativePrefix) {
-      let digits = '';
-      for (let j = 0; j < symbols.length; j++) {
-        const character = symbols[j];
-        const digit = this.digitIndexes[character];
-        if (digit === undefined) throw new TypeError('unexpected character <' + character + '> found');
-        if (digit >= base) throw new TypeError('<' + character + '> is out of the base limit');
-        if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
-      }
-      return sign + String(BigInt(nativePrefix + (base <= this.nativeRadixLimit ? input : digits)));
+    if (symbols.length > 15 && (base === 2 || base === 8 || base === 16) && hasBigInt) {
+      return sign + this.decodeNative(input, symbols, base);
     }
     let integer = 0;
     let large: bigint | undefined;
@@ -213,19 +203,36 @@ export default class NumBase {
       const digit = this.digitIndexes[character];
       if (digit === undefined) throw new TypeError('unexpected character <' + character + '> found');
       if (digit >= base) throw new TypeError('<' + character + '> is out of the base limit');
-      if (bigRadix !== undefined) {
+      if (hasBigInt) {
         if (large !== undefined) {
-          large = large * bigRadix + BigInt(digit);
+          large = large * bigRadix! + BigInt(digit);
         } else {
           const next = integer * base + digit;
           if (next <= 9007199254740991) integer = next;
-          else large = BigInt(integer) * bigRadix + BigInt(digit);
+          else {
+            bigRadix = BigInt(base);
+            large = BigInt(integer) * bigRadix + BigInt(digit);
+          }
         }
       } else {
         result = multiplyAdd(result, base, digit);
       }
     }
-    return sign + (bigRadix === undefined ? result : large === undefined ? String(integer) : String(large));
+    return sign + (!hasBigInt ? result : large === undefined ? String(integer) : String(large));
+  }
+
+  // Keep native parsing outside the general loop so small decodes stay cheap.
+  private decodeNative(input: string, symbols: string | string[], base: number): string {
+    const prefix = base === 2 ? '0b' : base === 8 ? '0o' : '0x';
+    let digits = '';
+    for (let j = 0; j < symbols.length; j++) {
+      const character = symbols[j];
+      const digit = this.digitIndexes[character];
+      if (digit === undefined) throw new TypeError('unexpected character <' + character + '> found');
+      if (digit >= base) throw new TypeError('<' + character + '> is out of the base limit');
+      if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
+    }
+    return String(BigInt(prefix + (base <= this.nativeRadixLimit ? input : digits)));
   }
 
   /** Convert between alphabets using exact decimal strings and strict validation. */
