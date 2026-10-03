@@ -140,7 +140,7 @@ The candidate encoded these Base62 datasets faster than both the published basel
 
 These results support an encoding improvement for the measured workloads. Base62 decoding uses the same accumulation algorithm as published 1.1.0; timing differences are not evidence of a decoding optimization there. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
 
-The candidate passes 35 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. The minified bundle grows from 4,162 to 4,696 bytes (gzip: 1,707 to 1,918 bytes), with no new runtime dependency or per-instance cache.
+The candidate passes 36 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. Additional radix 63–1024 cases check exact large integers in both native and no-BigInt environments. The minified bundle grows from 4,162 to 4,696 bytes (gzip: 1,707 to 1,918 bytes), with no new runtime dependency or per-instance cache.
 
 ### Native hexadecimal decoding
 

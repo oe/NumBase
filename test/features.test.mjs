@@ -151,6 +151,28 @@ test('encoding preserves zero-filled groups and exact digits around large radix 
   assert.equal(emoji.decode(encoded), value);
 });
 
+test('large DIY radices retain exact encodings with and without native BigInt', () => {
+  const alphabet = Array.from({ length: 1024 }, (_, i) => String.fromCharCode(0x4e00 + i)).join('');
+  const base = new NumBase(alphabet);
+  const cases = [];
+  for (const radix of [63, 64, 100, 128, 256, 1024]) {
+    for (const exponent of [5, 8, 16, 33]) {
+      const power = BigInt(radix) ** BigInt(exponent);
+      for (const value of [power - 1n, power, power + 1n, -(power + 1n)]) {
+        const decimal = value.toString();
+        cases.push({ radix, decimal, encoded: reference(decimal, base.BASE, radix) });
+      }
+    }
+  }
+  for (const native of [true, false]) {
+    if (!native) vi.stubGlobal('BigInt', undefined);
+    for (const { radix, decimal, encoded } of cases) {
+      assert.equal(base.encode(decimal, radix), encoded);
+      assert.equal(base.decode(encoded, radix), decimal);
+    }
+  }
+});
+
 test('convert handles huge values, signs, normalization, and explicit radices', () => {
   const source = new NumBase('0123456789abcdef');
   const target = new NumBase();
