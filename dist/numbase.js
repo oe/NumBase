@@ -104,31 +104,51 @@ var NumBase = function() {
 			sign = "-";
 			decimal = decimal.slice(1);
 		}
-		var result = [];
+		var result = "";
 		if (decimal.length <= 15) {
 			var value = Number(decimal);
 			do {
-				result.push(this.BASE[value % base] + "");
+				result = this.BASE[value % base] + result;
 				value = Math.floor(value / base);
 			} while (value);
-			return sign + result.reverse().join("");
+			return sign + result;
 		}
 		if (typeof BigInt === "function") {
 			var value = BigInt(decimal);
-			if (base <= this.nativeRadixLimit) return sign + value.toString(base);
-			var bigRadix = BigInt(base);
+			if (base <= 36) {
+				var digits = value.toString(base);
+				if (base <= this.nativeRadixLimit) return sign + digits;
+				for (var i = 0; i < digits.length; i++) {
+					var code = digits.charCodeAt(i);
+					result += this.BASE[code <= 57 ? code - 48 : code - 87];
+				}
+				return sign + result;
+			}
+			var chunkRadix = base;
+			var chunkDigits = 1;
+			var threshold = Math.floor(9007199254740991 / base);
+			while (chunkRadix <= threshold) {
+				chunkRadix *= base;
+				chunkDigits++;
+			}
+			var bigChunkRadix = BigInt(chunkRadix);
 			do {
-				result.push(this.BASE[Number(value % bigRadix)] + "");
-				value /= bigRadix;
+				var chunk = Number(value % bigChunkRadix);
+				value /= bigChunkRadix;
+				for (var digit = 0; digit < chunkDigits; digit++) {
+					result = this.BASE[chunk % base] + result;
+					chunk = Math.floor(chunk / base);
+					if (!chunk && !value) break;
+				}
 			} while (value);
-			return sign + result.reverse().join("");
+			return sign + result;
 		}
 		while (decimal) {
 			var divided = divide(decimal, base);
-			result.push(this.BASE[divided.mod] + "");
+			result = this.BASE[divided.mod] + result;
 			decimal = divided.times;
 		}
-		return sign + result.reverse().join("");
+		return sign + result;
 	};
 	/** Decode nonempty alphabet digits to an exact decimal string. */
 	NumBase.prototype.decode = function(encoded, radix) {

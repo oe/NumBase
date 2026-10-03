@@ -99,6 +99,29 @@ test('native radix formatting respects the selected alphabet prefix', () => {
   }
 });
 
+test('encoding preserves zero-filled groups and exact digits around large radix powers', () => {
+  const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (const symbols of [alphabet, alphabet.split('').reverse().join('')]) {
+    const base = new NumBase(symbols);
+    for (let radix = 2; radix <= 62; radix++) {
+      for (const exponent of [8, 9, 16, 18, 33, 52, 66, 104]) {
+        const power = BigInt(radix) ** BigInt(exponent);
+        for (const value of [power - 1n, power, power + 1n, power + BigInt(radix), -(power + 1n)]) {
+          const decimal = value.toString();
+          const encoded = reference(decimal, base.BASE, radix);
+          assert.equal(base.encode(decimal, radix), encoded);
+          assert.equal(base.decode(encoded, radix), decimal);
+        }
+      }
+    }
+  }
+  const emoji = new NumBase('😀😁😂😃', { unicode: true });
+  const value = (4n ** 98n + 1n).toString();
+  const encoded = reference(value, Array.from('😀😁😂😃'));
+  assert.equal(emoji.encode(value), encoded);
+  assert.equal(emoji.decode(encoded), value);
+});
+
 test('convert handles huge values, signs, normalization, and explicit radices', () => {
   const source = new NumBase('0123456789abcdef');
   const target = new NumBase();

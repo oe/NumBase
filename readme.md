@@ -167,7 +167,7 @@ For standard digit alphabets in radices 2–36, native `BigInt` parsing/formatti
 
 ### Measured integer conversion performance
 
-The following is one Linux x64 / Intel Xeon Platinum 8573C run on Node 24.19.0. Numbers are **median microseconds per operation; lower is faster**. All codecs reuse instances and the same lowercase-first Base62 alphabet. Encoding includes decimal-string parsing; decoding includes decimal-string output. There are 16 positive inputs per dataset and 15 samples.
+The following compares **published NumBase 1.1.0** in one Linux x64 / Intel Xeon Platinum 8573C run on Node 24.19.0. Numbers are **median microseconds per operation; lower is faster**. All codecs reuse instances and the same lowercase-first Base62 alphabet. Encoding includes decimal-string parsing; decoding includes decimal-string output. There are 16 positive inputs per dataset and 15 samples.
 
 | Input | Operation | NumBase | @sindresorhus/base62 | big-integer |
 | --- | --- | ---: | ---: | ---: |
@@ -179,6 +179,8 @@ The following is one Linux x64 / Intel Xeon Platinum 8573C run on Node 24.19.0. 
 | 1,000 decimal digits | decode | 114.769 | 119.386 | 196.794 |
 
 NumBase was faster at decoding the sampled short IDs; @sindresorhus/base62 was faster at encoding. Long-input decoding was similar. These measurements do not establish a universal winner. base-x has different byte/leading-zero semantics, so it is not timed against integer APIs.
+
+An **unreleased encoding optimization** measured about 2–2.7× faster Base62 encoding for 64-/128-bit IDs and 4.5–5.2× faster for 1,000-digit decimal strings than published 1.1.0 on Node 22/24. It also beat @sindresorhus/base62 on these samples; gains persisted when output bytes were materialized. See the [candidate measurements and limitations](benchmarks/competitors/README.md#unreleased-encoding-optimization). Decoding is unchanged.
 
 See [the full comparison](https://github.com/oe/NumBase/tree/master/benchmarks/competitors) for exact adapters, pinned dependencies, feature sources, limitations, Node 22 results, native hexadecimal results, raw samples and reproduction commands.
 
@@ -234,7 +236,7 @@ Valid integer encodings, default Base62 order, UTF-16 mode, signs, string negati
 
 ## Performance and development
 
-Small encodes use exact Number arithmetic. Larger integers use native BigInt where available, including native formatting for standard digit alphabets through radix 36. Decoding promotes from Number to BigInt before exceeding the safe integer range. Older runtimes retain decimal-string division and fused multiply/add; the fallback has roughly quadratic cost in digit count at a fixed radix. Choose input limits appropriate to your application.
+Small encodes use exact Number arithmetic. Larger integers use native BigInt where available. The unreleased implementation uses native formatting through radix 36, translating digit values for DIY alphabets, and extracts groups of digits for larger radices. Group remainders fit exactly in Number; the whole large integer stays BigInt. Decoding promotes from Number to BigInt before exceeding the safe integer range. Older runtimes retain decimal-string division and fused multiply/add; the fallback has roughly quadratic cost in digit count at a fixed radix. Choose input limits appropriate to your application.
 
 Use Node.js 22.12+ or 24 and pnpm 12.8.1:
 

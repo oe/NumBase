@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import NumBase from '../../dist/numbase.mjs';
+import NumBase from 'numbase/dist/numbase.mjs';
+import Candidate from '../../dist/numbase.mjs';
 import { Base62 } from '@sindresorhus/base62';
 import bigInt from 'big-integer';
 import baseX from 'base-x';
@@ -14,6 +15,11 @@ const base62 = new NumBase();
 const hexadecimal = new NumBase(hexAlphabet);
 const competitor62 = new Base62({ alphabet });
 const samples = 15;
+const includeCandidate = process.argv.includes('--candidate');
+const materialize = process.argv.includes('--materialize');
+const candidateBase62 = new Candidate();
+const candidateHexadecimal = new Candidate(hexAlphabet);
+const consume = materialize ? value => Buffer.from(value).length : value => value.length;
 let state = 0x243f6a88;
 function random() {
   state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
@@ -65,7 +71,7 @@ let consumed = 0;
 function measure(functions, values, iterations) {
   const timings = functions.map(() => []);
   for (const { run } of functions) {
-    for (let i = 0; i < Math.min(iterations, 512); i++) consumed ^= run(values[i % values.length]).length;
+    for (let i = 0; i < Math.min(iterations, 512); i++) consumed ^= consume(run(values[i % values.length]));
   }
   for (let sample = 0; sample < samples; sample++) {
     let order = functions.map((_, i) => (i + sample) % functions.length);
@@ -73,7 +79,7 @@ function measure(functions, values, iterations) {
     for (const index of order) {
       const run = functions[index].run;
       const start = performance.now();
-      for (let i = 0; i < iterations; i++) consumed ^= run(values[i % values.length]).length;
+      for (let i = 0; i < iterations; i++) consumed ^= consume(run(values[i % values.length]));
       timings[index].push((performance.now() - start) * 1000 / iterations);
     }
   }
@@ -86,6 +92,7 @@ const results = [];
 for (const radix of [62, 16]) {
   const codec = radix === 62 ? base62 : hexadecimal;
   const digits = radix === 62 ? alphabet : hexAlphabet;
+  const candidate = radix === 62 ? candidateBase62 : candidateHexadecimal;
   for (const { name, values, iterations } of datasets) {
     const encoded = values.map(value => codec.encode(value));
     const encode = [
@@ -102,6 +109,10 @@ for (const radix of [62, 16]) {
         ? { name: '@sindresorhus/base62', run: value => competitor62.decodeBigInt(value).toString() }
         : { name: 'native BigInt', run: value => BigInt('0x' + value).toString() },
     ];
+    if (includeCandidate) {
+      encode.push({ name: 'NumBase (candidate)', run: value => candidate.encode(value) });
+      decode.push({ name: 'NumBase (candidate)', run: value => candidate.decode(value) });
+    }
     for (let i = 0; i < values.length; i++) {
       for (const { run } of encode) assert.equal(run(values[i]), encoded[i]);
       for (const { run } of decode) assert.equal(run(encoded[i]), values[i]);
@@ -114,8 +125,9 @@ function version(file) { return JSON.parse(readFileSync(new URL(file, import.met
 process.stdout.write(JSON.stringify({
   timestampUTC: new Date().toISOString(),
   environment: { node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, cpu: os.cpus()[0].model, logicalCpus: os.cpus().length },
-  versions: { numbase: version('../../package.json'), '@sindresorhus/base62': version('node_modules/@sindresorhus/base62/package.json'), 'big-integer': version('node_modules/big-integer/package.json'), 'base-x': version('node_modules/base-x/package.json') },
-  methodology: { samples, vectorsPerDataset: 16, seed: '0x243f6a88', units: 'microseconds per operation', inputOutput: 'encode: decimal string -> encoded string; decode: encoded string -> decimal string', construction: 'instances reused; construction/import excluded', order: 'rotated and reversed between samples', bigint: 'native BigInt available', scope: 'positive integers; identical case-sensitive alphabets; base-x feature checks only', consumed },
+  versions: { numbase: version('node_modules/numbase/package.json'), '@sindresorhus/base62': version('node_modules/@sindresorhus/base62/package.json'), 'big-integer': version('node_modules/big-integer/package.json'), 'base-x': version('node_modules/base-x/package.json') },
+  candidate: includeCandidate ? { packageVersion: version('../../package.json'), entrySHA256: createHash('sha256').update(readFileSync(new URL('../../dist/numbase.mjs', import.meta.url))).digest('hex'), status: 'unreleased working-tree implementation' } : null,
+  methodology: { samples, consumption: materialize ? 'UTF-8 Buffer allocation (materialized output)' : 'returned string length', vectorsPerDataset: 16, seed: '0x243f6a88', units: 'microseconds per operation', inputOutput: 'encode: decimal string -> encoded string; decode: encoded string -> decimal string', construction: 'instances reused; construction/import excluded', order: 'rotated and reversed between samples', bigint: 'native BigInt available', scope: 'positive integers; identical case-sensitive alphabets; base-x feature checks only', consumed },
   inputs: datasets.map(({ name, values }) => ({ dataset: name, count: values.length, minDecimalDigits: Math.min(...values.map(value => value.length)), maxDecimalDigits: Math.max(...values.map(value => value.length)), sha256: createHash('sha256').update(JSON.stringify(values)).digest('hex') })),
   results,
 }, null, 2) + '\n');

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Encode results by prepending complete alphabet symbols, avoiding the temporary digit array and reverse/join pass.
+- Extract multiple digits per BigInt division, then expand the exact remainder with Number arithmetic. Preserve zero padding between groups, signed zero, custom alphabets and Unicode symbols.
+- Use native formatting for radices 2–36, translating digit values for DIY alphabets when needed. Keep the no-BigInt fallback. No API or encoding-format changes.
+
 ## 1.1.0
 
 ### Fixed configuration

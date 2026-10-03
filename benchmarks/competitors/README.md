@@ -20,11 +20,11 @@ node benchmarks/competitors/compare.mjs > /tmp/numbase-comparison.json
 npx --yes node@22 benchmarks/competitors/compare.mjs > /tmp/numbase-comparison-node22.json
 ```
 
-Competitor dependencies are pinned in this private project's own lockfile. They are not NumBase runtime dependencies and are not included in the npm package. Timing assertions check equivalent output before measurement; feature assertions check the selected documented differences.
+The default run imports the pinned, published NumBase 1.1.0, so it remains a stable baseline when local source changes. Competitor dependencies are pinned in this private project's own lockfile. They are not NumBase runtime dependencies and are not included in the npm package. Timing assertions check equivalent output before measurement; feature assertions check the selected documented differences.
 
 ## Method
 
-- NumBase uses the distributed native ESM entry. Native BigInt is available to all packages; this report does not measure fallback runtimes, browsers, import time, bundle size, or memory usage.
+- NumBase uses the published native ESM entry; `--candidate` adds the local distributed native ESM entry. Native BigInt is available to all packages; this report does not measure fallback runtimes, browsers, import time, bundle size, or memory usage.
 - Encoding starts with a decimal string and returns an encoded string. Decoding starts with encoded digits and returns a decimal string. Required adapter parsing/formatting is inside the timed operation: `encodeBigInt(BigInt(decimal))`, `decodeBigInt(encoded).toString()`, and big-integer parsing/formatting.
 - All functions use the same digit-value order. Only positive integers are timed, so all integer libraries support the workload. Input-validation contracts differ; these valid-input timings do not imply equivalent error handling.
 - Each dataset contains 16 deterministic inputs. The 64-/128-bit inputs have their high bit set; the long inputs have exactly 1,000 decimal digits. The generator seed and input hashes are recorded in JSON. Zero, negative values, invalid inputs, and pre-parsed bigint inputs are not timed.
@@ -84,10 +84,60 @@ Competitor dependencies are pinned in this private project's own lockfile. They 
 | 1,000 decimal digits | encode | 5.598 | 4.316 | 431.858 |
 | 1,000 decimal digits | decode | 164.823 | 19.295 | 265.062 |
 
-## What the measurements support
+## What the published 1.1.0 measurements support
 
 NumBase decoded the sampled 64-/128-bit Base62 values faster than both integer competitors in these runs. @sindresorhus/base62 encoded all three Base62 datasets faster than NumBase. Their 1,000-digit decoding times were close enough that this report makes no broad claim about a long-input speed advantage.
 
 NumBase beat big-integer on the selected conversion workloads, but big-integer provides a much broader arithmetic API. Native BigInt beat NumBase for standard hexadecimal encoding and decoding, especially long hexadecimal decoding; if standard radices and native input/output are sufficient, native BigInt is a good choice.
 
 The reason to choose NumBase is the combination of configurable radix/digit symbols, exact decimal-string conversion and a small focused API. The benchmarks support specific performance statements, not a claim that NumBase is always fastest.
+
+## Unreleased encoding optimization
+
+The working-tree candidate keeps the API, validation and digit formats unchanged. It borrows the direct string-prepending approach used by @sindresorhus/base62, avoiding an intermediate array and reverse/join. Its larger improvement comes from extracting several digits per BigInt division: Base62 extracts eight digits at a time. Each remainder is bounded by Number.MAX_SAFE_INTEGER and expanded with exact Number arithmetic; the whole integer remains BigInt. Interior groups retain their zero padding. Radices 2–36 use native formatting with digit-symbol translation for DIY alphabets, including Unicode code points. The decimal-string fallback remains available.
+
+Reproduce the candidate comparison after building:
+
+```sh
+node benchmarks/competitors/compare.mjs --candidate > /tmp/numbase-candidate-node24.json
+npx --yes node@22 benchmarks/competitors/compare.mjs --candidate > /tmp/numbase-candidate-node22.json
+node benchmarks/competitors/compare.mjs --candidate --materialize > /tmp/numbase-candidate-materialized.json
+```
+
+The following Base62 encoding tables use the same method and inputs as above, timing the published baseline and candidate together. Units are median microseconds per operation. Candidate metadata records the SHA-256 of the measured distribution; its package version is still 1.1.0 because it is **unreleased**. Full JSON also retains decoding, hexadecimal and big-integer results.
+
+### Node 24.19.0
+
+[Raw samples and metadata](results-candidate-node24.json).
+
+| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| --- | ---: | ---: | ---: |
+| 64-bit integers | 1.503 | 0.663 | 1.094 |
+| 128-bit integers | 2.762 | 1.024 | 2.211 |
+| 1,000 decimal digits | 259.625 | 49.879 | 255.440 |
+
+### Node 22.23.3
+
+[Raw samples and metadata](results-candidate-node22.json).
+
+| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| --- | ---: | ---: | ---: |
+| 64-bit integers | 1.588 | 0.760 | 1.152 |
+| 128-bit integers | 2.662 | 1.155 | 2.081 |
+| 1,000 decimal digits | 200.989 | 45.146 | 203.702 |
+
+### Node 24.19.0, materialized output
+
+[Raw samples and metadata](results-candidate-materialized-node24.json).
+
+| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| --- | ---: | ---: | ---: |
+| 64-bit integers | 1.557 | 0.821 | 1.234 |
+| 128-bit integers | 2.808 | 1.344 | 2.303 |
+| 1,000 decimal digits | 254.693 | 52.437 | 252.565 |
+
+The candidate encoded these Base62 datasets faster than both the published baseline and @sindresorhus/base62 in both Node versions. The materialized run includes UTF-8 Buffer allocation for every result, so the benefit survives consuming the actual output bytes rather than only the string length. This extra allocation is specific to that experiment, not part of NumBase's API.
+
+These results support an encoding improvement for the measured workloads; decoding was not optimized. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
+
+The candidate passes 34 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. The minified bundle grows from 4,162 to 4,315 bytes (gzip: 1,707 to 1,809 bytes), with no new runtime dependency or per-instance cache.
