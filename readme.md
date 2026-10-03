@@ -147,7 +147,7 @@ For browser scripts, `dist/numbase.min.js` exposes `window.NumBase`. AMD/CMD loa
 
 ## Migrating from 0.x
 
-The current development version uses fixed instance configuration. The safe conversion behavior introduced in 1.0.0 remains. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes.
+Version 1.1.0 uses fixed instance configuration. The safe conversion behavior introduced in 1.0.0 remains. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes.
 
 From either **0.x or 1.0.0**, stop modifying `BASE` or `MAX_BASE`. Create a new instance for a different alphabet; pass a radix to `encode()` / `decode()` or conversion options for a smaller base. Read access remains available.
 

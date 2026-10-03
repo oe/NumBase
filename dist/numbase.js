@@ -1,4 +1,4 @@
-/*! numbase v1.0.0 | MIT | Saiya */
+/*! numbase v1.1.0 | MIT | Saiya */
 (function (root, factory) {
   if (typeof define === 'function' && (define.amd || define.cmd)) {
     define(function () { return factory(); });
