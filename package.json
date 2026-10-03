@@ -10,7 +10,8 @@
   "devDependencies": {
     "acorn": "^8.18.0",
     "terser": "^5.51.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^8.3.2"
   },
   "author": {
     "company": "evecalm.com",
@@ -35,13 +36,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "vite build && pnpm build:types",
     "test": "node --test test/*.test.cjs",
-    "typecheck": "tsc -p tsconfig.test.json",
-    "check": "pnpm build && pnpm test && pnpm typecheck && pnpm test:package",
+    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && pnpm typecheck:consumers",
+    "check": "pnpm build && pnpm test && pnpm typecheck:consumers && pnpm test:package",
     "bench": "node scripts/benchmark.cjs",
     "prepublishOnly": "pnpm check",
-    "test:package": "node scripts/test-package.cjs"
+    "test:package": "node scripts/test-package.cjs",
+    "build:types": "tsc -p tsconfig.json && node scripts/build-types.mjs",
+    "typecheck:consumers": "tsc -p tsconfig.test.json"
   },
   "packageManager": "pnpm@12.8.1"
 }

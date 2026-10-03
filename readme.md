@@ -2,7 +2,7 @@
 
 Convert arbitrary-size decimal integers to and from a custom radix alphabet. NumBase keeps large integers as strings and uses an exact numeric fast path for inputs of at most 15 decimal digits. It has no runtime dependencies, and works with CommonJS, browser scripts, and AMD/CMD loaders.
 
-> Maintenance preview: this branch modernizes the build, adds TypeScript declarations and an opt-in native ESM entry, and optimizes string arithmetic. npm currently contains version 0.1.1; the repository's existing version is 0.1.2. These changes have not been published.
+> Maintenance preview: this branch adopts TypeScript development and Vite + pnpm builds, adds TypeScript declarations and an opt-in native ESM entry, and optimizes string arithmetic. npm currently contains version 0.1.1; the repository's existing version is 0.1.2. These changes have not been published.
 
 ## Quick start
 
@@ -69,18 +69,19 @@ const numeric: string | number = base.encode(42);
 
 ## Development
 
-Use Node.js 22 or 24 and pnpm 12.8.1, pinned in `package.json`.
+Use Node.js 22.12+ or 24 and pnpm 12.8.1, pinned in `package.json`.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm check     # build, runtime/compatibility tests, type fixtures, and packed installation
+pnpm check     # build/typecheck source, runtime tests, consumer types, and packed installation
+pnpm typecheck # check source and generated consumer declarations without rebuilding
 pnpm bench     # compare with the checked-in npm 0.1.1 reference
 pnpm audit
 ```
 
-The JavaScript source builds into the existing readable and minified UMD files, an additional `.mjs` entry, and declarations. Builds are deterministic and do not modify the package version. Tests compare conversions with an independent BigInt oracle and the published 0.1.1 implementation, including unusual legacy inputs. CI checks Node.js 22/24, packed consumers, and reproducible generated files. BigInt is used by tests as a reference, not by the runtime implementation.
+Vite bundles the TypeScript source into the existing readable and minified UMD files, an additional `.mjs` entry, and declarations. The Vite distribution plugin preserves the historical AMD/CMD wrapper and ES5 syntax using TypeScript lowering and Terser minification. Declarations are generated from the implementation. Builds are deterministic and do not modify the package version. Tests compare conversions with an independent BigInt oracle and the published 0.1.1 implementation, including unusual legacy inputs. CI checks Node.js 22/24, packed consumers, and reproducible generated files. BigInt is used by tests as a reference, not by the runtime implementation.
 
-Arithmetic improvements remove repeated suffix slicing during division, combine decimal multiplication and addition into one carry pass, and replace repeated alphabet scans with a lookup table. The benchmark prints timings for large and small inputs; results depend on the engine and workload. Conversion still requires work proportional to the input and output lengths and is unsuitable for unbounded untrusted inputs.
+Arithmetic improvements remove repeated suffix slicing during division, combine decimal multiplication and addition into one carry pass, and replace repeated alphabet scans with a lookup table. The benchmark alternates baseline/candidate order over seven paired samples and prints timings for large and small inputs; results depend on the engine and workload. Conversion still requires work proportional to the input and output lengths and is unsuitable for unbounded untrusted inputs.
 
 This PR does not publish a version. Stricter rejection of unsafe numbers or invalid alphabets, Unicode code-point alphabets, and canonical validation would need explicit compatibility decisions in a later release.
 
