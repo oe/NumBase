@@ -104,31 +104,51 @@ var NumBase = function() {
 			sign = "-";
 			decimal = decimal.slice(1);
 		}
-		var result = [];
+		var result = "";
 		if (decimal.length <= 15) {
 			var value = Number(decimal);
 			do {
-				result.push(this.BASE[value % base] + "");
+				result = this.BASE[value % base] + result;
 				value = Math.floor(value / base);
 			} while (value);
-			return sign + result.reverse().join("");
+			return sign + result;
 		}
 		if (typeof BigInt === "function") {
 			var value = BigInt(decimal);
-			if (base <= this.nativeRadixLimit) return sign + value.toString(base);
-			var bigRadix = BigInt(base);
+			if (base <= 36) {
+				var digits = value.toString(base);
+				if (base <= this.nativeRadixLimit) return sign + digits;
+				for (var i = 0; i < digits.length; i++) {
+					var code = digits.charCodeAt(i);
+					result += this.BASE[code <= 57 ? code - 48 : code - 87];
+				}
+				return sign + result;
+			}
+			var chunkRadix = base;
+			var chunkDigits = 1;
+			var threshold = Math.floor(9007199254740991 / base);
+			while (chunkRadix <= threshold) {
+				chunkRadix *= base;
+				chunkDigits++;
+			}
+			var bigChunkRadix = BigInt(chunkRadix);
 			do {
-				result.push(this.BASE[Number(value % bigRadix)] + "");
-				value /= bigRadix;
+				var chunk = Number(value % bigChunkRadix);
+				value /= bigChunkRadix;
+				for (var digit = 0; digit < chunkDigits; digit++) {
+					result = this.BASE[chunk % base] + result;
+					chunk = Math.floor(chunk / base);
+					if (!chunk && !value) break;
+				}
 			} while (value);
-			return sign + result.reverse().join("");
+			return sign + result;
 		}
 		while (decimal) {
 			var divided = divide(decimal, base);
-			result.push(this.BASE[divided.mod] + "");
+			result = this.BASE[divided.mod] + result;
 			decimal = divided.times;
 		}
-		return sign + result.reverse().join("");
+		return sign + result;
 	};
 	/** Decode nonempty alphabet digits to an exact decimal string. */
 	NumBase.prototype.decode = function(encoded, radix) {
@@ -141,7 +161,9 @@ var NumBase = function() {
 			input = input.slice(1);
 		}
 		var symbols = this.unicode ? unicodeSymbols(input) : input;
-		var bigRadix = typeof BigInt === "function" ? BigInt(base) : void 0;
+		var hasBigInt = typeof BigInt === "function";
+		var bigRadix;
+		if (symbols.length > 15 && (base === 2 || base === 8 || base === 16) && hasBigInt) return sign + this.decodeNative(input, symbols, base);
 		var integer = 0;
 		var large;
 		var result = "0";
@@ -150,16 +172,31 @@ var NumBase = function() {
 			var digit = this.digitIndexes[character];
 			if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
 			if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
-			if (bigRadix !== void 0) {
+			if (hasBigInt) {
 				if (large !== void 0) large = large * bigRadix + BigInt(digit);
 				else {
 					var next = integer * base + digit;
 					if (next <= 9007199254740991) integer = next;
-					else large = BigInt(integer) * bigRadix + BigInt(digit);
+					else {
+						bigRadix = BigInt(base);
+						large = BigInt(integer) * bigRadix + BigInt(digit);
+					}
 				}
 			} else result = multiplyAdd(result, base, digit);
 		}
-		return sign + (bigRadix === void 0 ? result : large === void 0 ? String(integer) : String(large));
+		return sign + (!hasBigInt ? result : large === void 0 ? String(integer) : String(large));
+	};
+	NumBase.prototype.decodeNative = function(input, symbols, base) {
+		var prefix = base === 2 ? "0b" : base === 8 ? "0o" : "0x";
+		var digits = "";
+		for (var j = 0; j < symbols.length; j++) {
+			var character = symbols[j];
+			var digit = this.digitIndexes[character];
+			if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
+			if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
+			if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
+		}
+		return String(BigInt(prefix + (base <= this.nativeRadixLimit ? input : digits)));
 	};
 	/** Convert between alphabets using exact decimal strings and strict validation. */
 	NumBase.prototype.convert = function(value, target, options) {

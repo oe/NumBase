@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Keep native parsing outside the general decode loop and construct the BigInt radix only when needed, avoiding a short-input performance regression. Add large DIY-radix regression cases and a reproducible small-input benchmark control.
+
+- Decode long binary/octal/hexadecimal inputs with native BigInt parsing after strict alphabet validation, translating custom symbols when needed. Preserve negative signs, signed zero and no-BigInt behavior.
+
+- Encode results by prepending complete alphabet symbols, avoiding the temporary digit array and reverse/join pass.
+- Extract multiple digits per BigInt division, then expand the exact remainder with Number arithmetic. Preserve zero padding between groups, signed zero, custom alphabets and Unicode symbols.
+- Use native formatting for radices 2–36, translating digit values for DIY alphabets when needed. Keep the no-BigInt fallback. No API or encoding-format changes.
+
 ## 1.1.0
 
 ### Fixed configuration

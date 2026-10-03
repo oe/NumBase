@@ -99,6 +99,80 @@ test('native radix formatting respects the selected alphabet prefix', () => {
   }
 });
 
+test('native parsing validates custom digits and preserves signs, zeros and fallback', () => {
+  const alphabets = [
+    '0123456789abcdef',
+    '0123456789ABCDEF',
+    'fedcba9876543210',
+    Array.from({ length: 16 }, (_, i) => String.fromCodePoint(0x1f600 + i)).join(''),
+  ];
+  const decimal = '1234567890'.repeat(100);
+  for (const alphabet of alphabets) {
+    const base = new NumBase(alphabet, { unicode: true });
+    for (const radix of [2, 8, 16]) {
+      const encoded = reference(decimal, base.BASE, radix);
+      assert.equal(base.decode(encoded, radix), decimal);
+      assert.equal(base.decode('-' + base.BASE[0].repeat(20) + encoded, radix), '-' + decimal);
+      assert.equal(base.decode(base.BASE[0].repeat(20), radix), '0');
+      assert.equal(base.decode('-' + base.BASE[0].repeat(20), radix), '-0');
+      assert.throws(() => base.decode(encoded + '!', radix), /unexpected character/);
+      if (radix < 16) assert.throws(() => base.decode(encoded + base.BASE[radix], radix), /base limit/);
+    }
+  }
+  const base = new NumBase();
+  for (const value of ['f'.repeat(20) + ' ', 'f'.repeat(20) + '\n', 'f'.repeat(20) + '-', '0x' + 'f'.repeat(20)]) {
+    assert.throws(() => base.decode(value, 16), TypeError);
+  }
+  const encoded = reference(decimal, base.BASE, 16);
+  vi.stubGlobal('BigInt', undefined);
+  assert.equal(base.decode(encoded, 16), decimal);
+});
+
+test('encoding preserves zero-filled groups and exact digits around large radix powers', () => {
+  const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (const symbols of [alphabet, alphabet.split('').reverse().join('')]) {
+    const base = new NumBase(symbols);
+    for (let radix = 2; radix <= 62; radix++) {
+      for (const exponent of [8, 9, 16, 18, 33, 52, 66, 104]) {
+        const power = BigInt(radix) ** BigInt(exponent);
+        for (const value of [power - 1n, power, power + 1n, power + BigInt(radix), -(power + 1n)]) {
+          const decimal = value.toString();
+          const encoded = reference(decimal, base.BASE, radix);
+          assert.equal(base.encode(decimal, radix), encoded);
+          assert.equal(base.decode(encoded, radix), decimal);
+        }
+      }
+    }
+  }
+  const emoji = new NumBase('😀😁😂😃', { unicode: true });
+  const value = (4n ** 98n + 1n).toString();
+  const encoded = reference(value, Array.from('😀😁😂😃'));
+  assert.equal(emoji.encode(value), encoded);
+  assert.equal(emoji.decode(encoded), value);
+});
+
+test('large DIY radices retain exact encodings with and without native BigInt', () => {
+  const alphabet = Array.from({ length: 1024 }, (_, i) => String.fromCharCode(0x4e00 + i)).join('');
+  const base = new NumBase(alphabet);
+  const cases = [];
+  for (const radix of [63, 64, 100, 128, 256, 1024]) {
+    for (const exponent of [5, 8, 16, 33]) {
+      const power = BigInt(radix) ** BigInt(exponent);
+      for (const value of [power - 1n, power, power + 1n, -(power + 1n)]) {
+        const decimal = value.toString();
+        cases.push({ radix, decimal, encoded: reference(decimal, base.BASE, radix) });
+      }
+    }
+  }
+  for (const native of [true, false]) {
+    if (!native) vi.stubGlobal('BigInt', undefined);
+    for (const { radix, decimal, encoded } of cases) {
+      assert.equal(base.encode(decimal, radix), encoded);
+      assert.equal(base.decode(encoded, radix), decimal);
+    }
+  }
+});
+
 test('convert handles huge values, signs, normalization, and explicit radices', () => {
   const source = new NumBase('0123456789abcdef');
   const target = new NumBase();
