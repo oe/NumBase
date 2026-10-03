@@ -56,69 +56,47 @@ test('default decoding rejects missing digits and unsupported symbols', () => {
   assert.throws(() => base.decode('-'), TypeError);
 });
 
-test('default radices reject passthrough inputs and respect the active MAX_BASE', () => {
+test('radices default to alphabet length and accept explicit numeric overrides', () => {
   const base = new NumBase('0123456789abcdef');
   for (const radix of [null, '2', '02', 0, 1, -2, 17, 2.5, NaN, Infinity, {}, true]) {
     assert.throws(() => base.encode('10', radix), RangeError);
     assert.throws(() => base.decode('10', radix), RangeError);
   }
-  base.MAX_BASE = 4;
-  assert.equal(base.encode('10'), '22');
-  assert.equal(base.decode('22'), '10');
-  assert.throws(() => base.encode('10', 5), RangeError);
-  assert.throws(() => base.encode('10', 5), RangeError);
+  assert.equal(base.MAX_BASE, 16);
+  assert.equal(base.encode('10'), 'a');
+  assert.equal(base.encode('10', 4), '22');
+  assert.equal(base.decode('22', 4), '10');
+  assert.equal(base.decode('22'), '34');
 });
 
-test('default operations revalidate mutable alphabets and configuration', () => {
-  for (const alphabet of ['a', '-01']) {
-    assert.throws(() => new NumBase(alphabet), TypeError);
-  }
-  const base = new NumBase('01');
-  for (const symbols of [['0', '0'], ['0', '-'], ['0', ''], ['0', 'ab'], ['0', 1], []]) {
-    base.BASE = symbols;
-    assert.throws(() => base.encode('10'), TypeError);
-  }
-  base.BASE = ['a', 'b'];
-  assert.equal(base.encode('3'), 'bb');
-  for (const maximum of [1, 3, 2.5, '2', NaN, Infinity]) {
-    base.MAX_BASE = maximum;
-    assert.throws(() => base.encode('10'), RangeError);
+test('alphabet and default radix are immutable at runtime', () => {
+  for (const [alphabet, options] of [['0123', undefined], ['😀😁😂😃', { unicode: true }]]) {
+    const base = new NumBase(alphabet, options);
+    const encoded = base.encode('9007199254740993');
+    assert.ok(Object.isFrozen(base.BASE));
+    assert.throws(() => { base.BASE[0] = 'x'; }, TypeError);
+    assert.throws(() => { base.BASE = ['a', 'b']; }, TypeError);
+    assert.throws(() => { base.MAX_BASE = 2; }, TypeError);
+    assert.throws(() => { base.BASE.reverse(); }, TypeError);
+    assert.throws(() => { base.BASE.push('x'); }, TypeError);
+    assert.throws(() => Object.defineProperty(base, 'BASE', { value: ['a', 'b'] }), TypeError);
+    assert.throws(() => Object.defineProperty(base, 'MAX_BASE', { value: 2 }), TypeError);
+    assert.equal(base.encode('9007199254740993'), encoded);
+    assert.equal(base.decode(encoded), '9007199254740993');
+    assert.deepEqual(Object.keys(base), ['BASE', 'MAX_BASE']);
   }
 });
 
-test('default validation detects edits after successful calls and recovers after repair', () => {
-  const base = new NumBase('0123');
-  assert.equal(base.encode('15'), '33');
-  assert.equal(base.decode('33'), '15');
-  for (const symbol of ['0', '-', 'ab', undefined]) {
-    base.BASE[1] = symbol;
-    assert.throws(() => base.encode('1'), TypeError);
-    assert.throws(() => base.decode('1'), TypeError);
-    base.BASE[1] = '1';
-    assert.equal(base.encode('1'), '1');
+test('native radix formatting respects the selected alphabet prefix', () => {
+  const decimal = '18446744073709551615';
+  for (const alphabet of ['0123456789abcdef', '0123456789ABCDEF', 'fedcba9876543210', '0123ZYXWVUTSRQPO', '0x']) {
+    const base = new NumBase(alphabet);
+    for (let radix = 2; radix <= base.MAX_BASE; radix++) {
+      const encoded = reference(decimal, base.BASE, radix);
+      assert.equal(base.encode(decimal, radix), encoded);
+      assert.equal(base.decode(encoded, radix), decimal);
+    }
   }
-  base.BASE.reverse();
-  assert.equal(base.encode('1'), '2');
-  assert.equal(base.decode('2'), '1');
-  base.BASE = ['a', 'b', 'c', 'd'];
-  assert.equal(base.encode('15'), 'dd');
-  base.BASE.pop();
-  assert.throws(() => base.encode('1'), RangeError);
-  base.MAX_BASE = 3;
-  assert.equal(base.decode('c'), '2');
-  base.MAX_BASE = 2.5;
-  assert.throws(() => base.decode('c'), RangeError);
-  base.MAX_BASE = 3;
-  base.BASE.length = 4; // A hole must not be mistaken for a cached valid symbol.
-  assert.throws(() => base.encode('1'), TypeError);
-  assert.deepEqual(Object.keys(base), ['BASE', 'MAX_BASE']);
-
-  const unicode = new NumBase('😀😁', { unicode: true });
-  assert.equal(unicode.encode('1'), '😁');
-  unicode.BASE[1] = '\ud800';
-  assert.throws(() => unicode.encode('1'), TypeError);
-  unicode.BASE[1] = '😂';
-  assert.equal(unicode.decode('😂'), '1');
 });
 
 test('convert handles huge values, signs, normalization, and explicit radices', () => {
@@ -155,9 +133,7 @@ test('Unicode mode counts and converts complete code points', () => {
     for (const decimal of ['0', '-0', '1', '123', '-123', '9007199254740993', '1234567890'.repeat(20)]) {
       const encoded = reference(decimal, Array.from(alphabet), radix);
       assert.equal(base.encode(decimal, radix), encoded);
-      assert.equal(base.encode(decimal, radix), encoded);
       const normalized = decimal === '-0' ? '-0' : BigInt(decimal).toString();
-      assert.equal(base.decode(encoded, radix), normalized);
       assert.equal(base.decode(encoded, radix), normalized);
     }
   }
@@ -183,10 +159,7 @@ test('Unicode mode rejects duplicate symbols, lone surrogates, and malformed dig
   const base = new NumBase('😀😁', { unicode: true });
   for (const encoded of ['\ud800', '\udc00', '😀\ud800', '\udc00😁', '😃']) {
     assert.throws(() => base.decode(encoded), TypeError);
-    assert.throws(() => base.decode(encoded), TypeError);
   }
-  base.BASE = ['😀', 'ab'];
-  assert.throws(() => base.encode('1'), TypeError);
   assert.throws(() => new NumBase('01', { unicode: 'yes' }), TypeError);
 });
 

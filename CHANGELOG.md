@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+### Fixed configuration
+
+- `BASE` is a frozen readonly array, and `MAX_BASE` is its fixed length. Neither property can be reassigned. This changes both 0.x and 1.0.0 behavior: create a new instance to change alphabets, or supply a radix per operation.
+
+### Simplification and performance
+
+- Validate the alphabet and build its digit lookup once at construction. Remove mutable configuration snapshots, per-operation alphabet scans, and input-length-dependent lookup rebuilding.
+- Determine native radix-formatting compatibility once from the alphabet prefix. Keep exact BigInt acceleration and the no-BigInt fallback.
+- Prefer modern import syntax throughout README examples.
+
 ## 1.0.0
 
 ### Breaking changes

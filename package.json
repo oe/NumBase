@@ -1,6 +1,6 @@
 {
   "name": "numbase",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Precision-safe decimal integer and Base62 conversion with custom alphabets. Zero runtime dependencies.",
   "main": "dist/numbase.min.js",
   "repository": {
