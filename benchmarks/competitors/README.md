@@ -1,6 +1,6 @@
 # Competitor comparison
 
-The feature comparison in the main README describes the installed versions: NumBase 1.1.0, @sindresorhus/base62 1.0.0, big-integer 1.6.52, and base-x 5.0.1. It is based on their shipped README/source and the feature assertions in [compare.mjs](compare.mjs).
+The feature comparison in the main README describes NumBase 1.1.1 (same capabilities as the pinned 1.1.0 baseline), @sindresorhus/base62 1.0.0, big-integer 1.6.52, and base-x 5.0.1. It is based on their shipped README/source and the feature assertions in [compare.mjs](compare.mjs).
 
 - [@sindresorhus/base62 1.0.0](https://www.npmjs.com/package/@sindresorhus/base62/v/1.0.0): custom alphabets must have exactly 62 unique characters. Integer/bigint methods accept non-negative values; separate methods encode bytes and text. Its default alphabet puts uppercase before lowercase, so we configure NumBase's lowercase-first alphabet for equal outputs.
 - [big-integer 1.6.52](https://www.npmjs.com/package/big-integer/v/1.6.52): arbitrary-precision arithmetic plus custom alphabets and arbitrary radices, including zero/unary/negative bases and `<digit>` notation. Custom alphabet indexing uses UTF-16 code units. Its radix parser is case-insensitive by default; our Base62 decode adapter explicitly sets `caseSensitive = true`.
@@ -92,9 +92,9 @@ NumBase beat big-integer on the selected conversion workloads, but big-integer p
 
 The reason to choose NumBase is the combination of configurable radix/digit symbols, exact decimal-string conversion and a small focused API. The benchmarks support specific performance statements, not a claim that NumBase is always fastest.
 
-## Unreleased conversion optimization
+## 1.1.1 conversion optimizations
 
-The working-tree candidate keeps the API, validation and digit formats unchanged. It borrows the direct string-prepending approach used by @sindresorhus/base62, avoiding an intermediate array and reverse/join. Its larger improvement comes from extracting several digits per BigInt division: Base62 extracts eight digits at a time. Each remainder is bounded by Number.MAX_SAFE_INTEGER and expanded with exact Number arithmetic; the whole integer remains BigInt. Interior groups retain their zero padding. Radices 2–36 use native formatting with digit-symbol translation for DIY alphabets, including Unicode code points. For decoding, binary/octal/hexadecimal inputs longer than 15 symbols use native prefixed BigInt parsing after every digit is validated. Custom symbols are translated into standard digits; signs stay outside native parsing so signed zero is preserved. Short inputs and other radices keep the existing accumulation path. The decimal-string fallback remains available.
+The optimized implementation in 1.1.1 keeps the API, validation and digit formats unchanged. It borrows the direct string-prepending approach used by @sindresorhus/base62, avoiding an intermediate array and reverse/join. Its larger improvement comes from extracting several digits per BigInt division: Base62 extracts eight digits at a time. Each remainder is bounded by Number.MAX_SAFE_INTEGER and expanded with exact Number arithmetic; the whole integer remains BigInt. Interior groups retain their zero padding. Radices 2–36 use native formatting with digit-symbol translation for DIY alphabets, including Unicode code points. For decoding, binary/octal/hexadecimal inputs longer than 15 symbols use native prefixed BigInt parsing after every digit is validated. Custom symbols are translated into standard digits; signs stay outside native parsing so signed zero is preserved. Short inputs and other radices keep the existing accumulation path. The decimal-string fallback remains available.
 
 Reproduce the candidate comparison after building:
 
@@ -104,13 +104,13 @@ npx --yes node@22 benchmarks/competitors/compare.mjs --candidate > /tmp/numbase-
 node benchmarks/competitors/compare.mjs --candidate --materialize > /tmp/numbase-candidate-materialized.json
 ```
 
-The following Base62 encoding tables use the same method and inputs as above, timing the published baseline and candidate together. Units are median microseconds per operation. Candidate metadata records the SHA-256 of the measured distribution; its package version is still 1.1.0 because it is **unreleased**. Full JSON also retains decoding, hexadecimal and big-integer results.
+The following Base62 encoding tables use the same method and inputs as above, timing the published baseline and candidate together. Units are median microseconds per operation. The measurements were recorded before publication: candidate metadata retains packageVersion 1.1.0 and its historical unreleased status. Its distribution SHA-256 matches the implementation released in 1.1.1. Full JSON also retains decoding, hexadecimal and big-integer results.
 
 ### Node 24.19.0
 
 [Raw samples and metadata](results-candidate-node24.json).
 
-| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| Input | Published 1.1.0 | 1.1.1 implementation | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
 | 64-bit integers | 1.526 | 0.664 | 1.145 |
 | 128-bit integers | 2.697 | 1.027 | 2.184 |
@@ -120,7 +120,7 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 [Raw samples and metadata](results-candidate-node22.json).
 
-| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| Input | Published 1.1.0 | 1.1.1 implementation | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
 | 64-bit integers | 1.458 | 0.653 | 1.084 |
 | 128-bit integers | 2.668 | 1.140 | 2.167 |
@@ -130,7 +130,7 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 [Raw samples and metadata](results-candidate-materialized-node24.json).
 
-| Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
+| Input | Published 1.1.0 | 1.1.1 implementation | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
 | 64-bit integers | 1.701 | 0.841 | 1.359 |
 | 128-bit integers | 3.054 | 1.478 | 2.499 |
@@ -146,7 +146,7 @@ The candidate passes 36 Vitest tests with 100% statements, branches, functions a
 
 The same fresh runs compare decimal-string output after hexadecimal parsing. NumBase validates its configured alphabet before native parsing; the bare BigInt reference has no NumBase validation layer. Units are median microseconds per operation.
 
-| Runtime | Input | Published 1.1.0 | Unreleased candidate | Native BigInt |
+| Runtime | Input | Published 1.1.0 | 1.1.1 implementation | Native BigInt |
 | --- | --- | ---: | ---: | ---: |
 | Node 24.19.0 | 64-bit integers | 0.615 | 0.507 | 0.174 |
 | Node 24.19.0 | 128-bit integers | 2.311 | 0.929 | 0.253 |
@@ -161,7 +161,7 @@ For these 1,000-digit values, hexadecimal decoding is approximately 3.4–3.6× 
 
 Candidate runs additionally include 16 deterministic safe integers `19901230 + i * 7919`, with 65,536 operations per sample. These guard the Number paths. Native parsing is kept in a separate internal method; the BigInt radix is constructed only when accumulation exceeds Number's safe range.
 
-| Runtime | Radix | Operation | Published 1.1.0 | Unreleased candidate |
+| Runtime | Radix | Operation | Published 1.1.0 | 1.1.1 implementation |
 | --- | --- | --- | ---: | ---: |
 | Node 24.19.0 | 62 | encode | 0.292 | 0.177 |
 | Node 24.19.0 | 62 | decode | 0.097 | 0.097 |

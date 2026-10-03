@@ -154,7 +154,7 @@ The mode is fixed at construction. Unicode mode rejects unpaired surrogates and 
 
 Custom digit alphabets are also available in other libraries. NumBase combines them with arbitrary radices, exact decimal-string conversion, signed integers and opt-in Unicode code points in three methods: `encode`, `decode`, and `convert`.
 
-| Capability | NumBase 1.1.0 | @sindresorhus/base62 1.0.0 | big-integer 1.6.52 | base-x 5.0.1 |
+| Capability | NumBase 1.1.1 | @sindresorhus/base62 1.0.0 | big-integer 1.6.52 | base-x 5.0.1 |
 | --- | --- | --- | --- | --- |
 | Radix and DIY digit symbols | Any integer radix ≥2, up to your alphabet length | DIY symbols, exactly 62 characters | Arbitrary radices and custom alphabets; also special bases and `<digit>` notation | Custom byte-range symbols; alphabet length <255 |
 | Integer input/output | Decimal strings, safe Numbers, bigint → digits; digits → decimal strings | Number/bigint integer APIs; non-negative values | Big-integer objects, parsing, formatting and arithmetic | Byte arrays ↔ encoded strings |
@@ -180,7 +180,7 @@ The following compares **published NumBase 1.1.0** in one Linux x64 / Intel Xeon
 
 NumBase was faster at decoding the sampled short IDs; @sindresorhus/base62 was faster at encoding. Long-input decoding was similar. These measurements do not establish a universal winner. base-x has different byte/leading-zero semantics, so it is not timed against integer APIs.
 
-An **unreleased conversion optimization** measured about 2.2–2.7× faster Base62 encoding for 64-/128-bit IDs and 4.8–5.4× faster for 1,000-digit decimal strings than published 1.1.0 on Node 22/24. It also beat @sindresorhus/base62 on these samples; gains persisted when output bytes were materialized. See the [candidate measurements and limitations](benchmarks/competitors/README.md#unreleased-conversion-optimization). Base62 decoding keeps its existing algorithm. Native parsing also improves long hexadecimal decoding by about 3.4–3.6× versus published 1.1.0, while preserving strict digit validation.
+The **1.1.1 conversion optimizations** measured about 2.2–2.7× faster Base62 encoding for 64-/128-bit IDs and 4.8–5.4× faster for 1,000-digit decimal strings than published 1.1.0 on Node 22/24. It also beat @sindresorhus/base62 on these samples; gains persisted when output bytes were materialized. See the [optimization measurements and limitations](https://github.com/oe/NumBase/blob/master/benchmarks/competitors/README.md#111-conversion-optimizations). Base62 decoding keeps its existing algorithm. Native parsing also improves long hexadecimal decoding by about 3.4–3.6× versus published 1.1.0, while preserving strict digit validation.
 
 See [the full comparison](https://github.com/oe/NumBase/tree/master/benchmarks/competitors) for exact adapters, pinned dependencies, feature sources, limitations, Node 22 results, native hexadecimal results, raw samples and reproduction commands.
 
@@ -236,7 +236,7 @@ Valid integer encodings, default Base62 order, UTF-16 mode, signs, string negati
 
 ## Performance and development
 
-Small encodes use exact Number arithmetic. Larger integers use native BigInt where available. The unreleased implementation uses native formatting through radix 36, translating digit values for DIY alphabets, and extracts groups of digits for larger radices. Group remainders fit exactly in Number; the whole large integer stays BigInt. The unreleased decoder validates all symbols and uses native parsing for binary, octal and hexadecimal inputs longer than 15 symbols, translating custom alphabets when needed. Other inputs use accumulation, promoting from Number to BigInt before exceeding the safe integer range. Older runtimes retain decimal-string division and fused multiply/add; the fallback has roughly quadratic cost in digit count at a fixed radix. Choose input limits appropriate to your application.
+Small encodes use exact Number arithmetic. Larger integers use native BigInt where available. Version 1.1.1 uses native formatting through radix 36, translating digit values for DIY alphabets, and extracts groups of digits for larger radices. Group remainders fit exactly in Number; the whole large integer stays BigInt. The 1.1.1 decoder validates all symbols and uses native parsing for binary, octal and hexadecimal inputs longer than 15 symbols, translating custom alphabets when needed. Other inputs use accumulation, promoting from Number to BigInt before exceeding the safe integer range. Older runtimes retain decimal-string division and fused multiply/add; the fallback has roughly quadratic cost in digit count at a fixed radix. Choose input limits appropriate to your application.
 
 Use Node.js 22.12+ or 24 and pnpm 12.8.1:
 

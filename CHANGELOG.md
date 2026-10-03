@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1
 
 - Keep native parsing outside the general decode loop and construct the BigInt radix only when needed, avoiding a short-input performance regression. Add large DIY-radix regression cases and a reproducible small-input benchmark control.
 
