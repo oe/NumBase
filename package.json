@@ -1,29 +1,47 @@
 {
   "name": "numbase",
   "version": "0.1.2",
-  "description": "convert an integer(can be a big number) with any base(radix), represented with any character",
+  "description": "Convert arbitrary-size decimal integers to and from custom radix alphabets, without runtime dependencies.",
   "main": "dist/numbase.min.js",
-  "repository": "https://github.com/evecalm/NumBase",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oe/NumBase.git"
+  },
   "devDependencies": {
-    "grunt": "~0.4.5",
-    "grunt-contrib-clean": "~0.6.0",
-    "grunt-contrib-coffee": "~0.7.0",
-    "grunt-contrib-uglify": "~0.5.0",
-    "grunt-umd": "~2.3.3"
+    "acorn": "^8.18.0",
+    "terser": "^5.51.2",
+    "typescript": "^5.9.3"
   },
   "author": {
     "company": "evecalm.com",
     "developer": "Saiya"
   },
   "keywords": [
-    "bignumber",
-    "number",
-    "base",
-    "radix"
+    "big-integer",
+    "big-number",
+    "base-conversion",
+    "radix",
+    "base62",
+    "custom-alphabet",
+    "numbase"
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/evecalm/NumBase/issues"
+    "url": "https://github.com/oe/NumBase/issues"
   },
-  "homepage": "https://github.com/evecalm/NumBase#readme"
+  "homepage": "https://github.com/oe/NumBase#readme",
+  "types": "dist/numbase.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.cjs",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "check": "pnpm build && pnpm test && pnpm typecheck && pnpm test:package",
+    "bench": "node scripts/benchmark.cjs",
+    "prepublishOnly": "pnpm check",
+    "test:package": "node scripts/test-package.cjs"
+  },
+  "packageManager": "pnpm@12.8.1"
 }

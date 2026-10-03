@@ -1,13 +1,3 @@
-/*! numbase v0.1.2 | MIT | Saiya */
-(function (root, factory) {
-  if (typeof define === 'function' && (define.amd || define.cmd)) {
-    define(function () { return factory(); });
-  } else if (typeof exports === 'object') {
-    module.exports = factory();
-  } else {
-    root.NumBase = factory();
-  }
-}(typeof window !== 'undefined' ? window : this, function () {
 /** Convert decimal integers and strings in a custom radix without Number rounding. */
 var DEFAULT_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -128,6 +118,3 @@ NumBase.prototype.decode = function (encoded, radix) {
   }
   return sign + result;
 };
-
-return NumBase;
-}));

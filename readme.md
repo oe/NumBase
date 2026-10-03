@@ -1,79 +1,89 @@
 # NumBase
-Convert an integer with any base(radix), represented with any character
 
-**You can conver a big number! Yeah, can be super big!**
+Convert arbitrary-size decimal integers to and from a custom radix alphabet. NumBase keeps large integers as strings and uses an exact numeric fast path for inputs of at most 15 decimal digits. It has no runtime dependencies, and works with CommonJS, browser scripts, and AMD/CMD loaders.
 
+> Maintenance preview: this branch modernizes the build, adds TypeScript declarations and an opt-in native ESM entry, and optimizes string arithmetic. npm currently contains version 0.1.1; the repository's existing version is 0.1.2. These changes have not been published.
 
+## Quick start
 
-## Methods
-
-```js
-// constructor, by default base string will be all alphanumerics (base62)
-NumBase(baseString='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
-// encode, default base will be the baseString's length
-NumBase::encode(number, base=baseString.length);
-// decode, default base will be the baseString's length
-NumBase::decode(encodedNumber, base=baseString.length);
-```
-
-`NumBase::encode` is something like `Number.prototype.toString`, but it won't limit the base size, and you can revert it with `NumBase::decode`.
-
-## Usage
-
-## for nodejs
-install it with npm:
-
-```
+```sh
 npm install numbase
+# or pnpm add numbase
 ```
-
-then require it:
 
 ```js
-var Numbase = require('numbase');
+const NumBase = require('numbase');
+const base = new NumBase(); // default alphabet: 0–9, a–z, A–Z (base62)
+
+const decimal = '9999999999999999999999999999999999999999999999999999999999999999';
+const encoded = base.encode(decimal);
+console.log(encoded); // isFUl3RMFVGKeLAbPmHOAA86LLjpGwei1jXh
+console.log(base.decode(encoded)); // original decimal string
+
+const chinese = new NumBase('中国上海市徐汇区');
+console.log(chinese.encode(19901230)); // 国国海区上徐市徐汇
+console.log(chinese.decode('国国海区上徐市徐汇')); // '19901230'
+console.log(chinese.encode(19901230, 7)); // 海海国国中徐中海汇
 ```
 
+Always pass integers outside JavaScript's safe `Number` range as decimal strings. `9007199254740993` as a numeric literal is already rounded before NumBase receives it; `'9007199254740993'` remains exact. Numeric values formatted with positive exponential notation are rejected, but smaller unsafe numbers retain their historical acceptance. The API does not recover precision lost before the call.
 
-### for browsers
-You can include the script with `script` tag, or with amd/cmd(such as requirejs, commonjs ) loaders
+## API and compatibility
 
-### examples
+| API | Behavior |
+| --- | --- |
+| `new NumBase(alphabet?)` | Default alphabet is `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`. Duplicate characters throw `TypeError`; an empty or omitted alphabet selects the default. |
+| `encode(decimal, radix?)` | Convert an integer to alphabet symbols. Defaults to the alphabet length. Valid integer strings return strings; invalid inputs or radices pass through unchanged. |
+| `decode(encoded, radix?)` | Return a decimal string. Invalid radices pass the input through unchanged. Unknown symbols or digits outside the selected radix throw `TypeError`. |
+| `BASE` / `MAX_BASE` | Public alphabet array and default radix. Their existing mutability is retained; keep them consistent when changing them. |
+
+The radix must be an integer from 2 through the alphabet length. Numeric strings such as `'16'` and null/undefined defaults keep their legacy behavior. A smaller radix uses the first `radix` symbols. Negative integers use a leading `-`; string negative zero remains `'-0'`. Decimal leading zeros are discarded by encoding, and leading zero symbols are discarded by decoding. Legacy `decode('')` returns `'0'` and `decode('-')` returns `'-0'`.
+
+The alphabet uses **UTF-16 code units**, preserving existing encodings. Chinese BMP characters work; emoji and other supplementary characters are not supported as individual symbols. Do not include `-` in a new alphabet: it conflicts with the negative sign. The legacy constructor still accepts it for compatibility. An alphabet with one symbol cannot perform conversion; its invalid radix causes input passthrough.
+
+This is integer representation conversion. It is not encryption or a general lossless text codec: leading zero symbols are lost, and a leading `-` has special meaning. Store any required original length separately.
+
+## Browser and module usage
+
+Include `dist/numbase.min.js` as a script to expose `window.NumBase`. The existing AMD/CMD loader and `require('numbase/dist/numbase')` paths remain available. Existing JavaScript entries remain ES5 syntax.
+
+The maintenance branch adds an opt-in native ESM entry:
 
 ```js
-// Setup an instance with default base string
-var base = new NumBase();
-// encode a super big number(you must pass it as a string) with default radix 62
-base.encode('9999999999999999999999999999999999999999999999999999999999999999');
-// returns 'isFUl3RMFVGKeLAbPmHOAA86LLjpGwei1jXh'
-// then decode it with default radix 62
-base.decode('isFUl3RMFVGKeLAbPmHOAA86LLjpGwei1jXh');
-// returns '9999999999999999999999999999999999999999999999999999999999999999'
-
-
-
-// Setup an instance with custom base string
-base = new NumBase('中国上海市徐汇区');
-// Encode an integer, use default radix 8
-base.encode(19901230); // returns '国国海区上徐市徐汇'
-// Decode a string, with default radix 8
-base.decode('国国海区上徐市徐汇'); // returns '19901230'
-
-// Encode an integer, with radix 7
-base.encode(19901230, 7); // returns '海海国国中徐中海汇'
-// Decode a string, with radix 7
-base.decode('海海国国中徐中海汇', 7); // returns '19901230'
-
-
-
-// And there is some thing else!
-// setup an instance with common letters used in articles
-base = new NumBase('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ?_+= %&*()#@!$\',;.');
-// then encode your words(like lover letters), encode it into numbers!
-// you should use decode to encode your words, strange?
-base.decode('The furthest distance in the world, is not between life and death. But when I stand in front of you,Yet you don\'t know that I love you!');
-// returns '57031381561275606392394756616992749156901193715383571159265195685821406415964188213571176381421833854362042612855929981904540567614578869806954870724353288627661399322034962143689960167076321231141725990698446223883841721866243690267975268687767453140124074'
-// and when decode the numbers, people will see the truth
-// use encode to decode numbers to words
-base.encode('57031381561275606392394756616992749156901193715383571159265195685821406415964188213571176381421833854362042612855929981904540567614578869806954870724353288627661399322034962143689960167076321231141725990698446223883841721866243690267975268687767453140124074');
-// returns "The furthest distance in the world, is not between life and death. But when I stand in front of you,Yet you don't know that I love you!"
+import NumBase from 'numbase/dist/numbase.mjs';
+const base = new NumBase();
 ```
+
+The package root keeps its CommonJS constructor export; no restrictive `exports` map is added. Native Node.js imports of the root receive that constructor as the default export.
+
+The maintenance branch also adds declarations for CommonJS and ESM:
+
+```ts
+import NumBase = require('numbase');
+const base = new NumBase();
+const encoded: string = base.encode('9007199254740993');
+const decimal: string = base.decode(encoded);
+// A numeric input can pass through unchanged, so the declared result is string | number.
+const numeric: string | number = base.encode(42);
+```
+
+## Development
+
+Use Node.js 22 or 24 and pnpm 12.8.1, pinned in `package.json`.
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check     # build, runtime/compatibility tests, type fixtures, and packed installation
+pnpm bench     # compare with the checked-in npm 0.1.1 reference
+pnpm audit
+```
+
+The JavaScript source builds into the existing readable and minified UMD files, an additional `.mjs` entry, and declarations. Builds are deterministic and do not modify the package version. Tests compare conversions with an independent BigInt oracle and the published 0.1.1 implementation, including unusual legacy inputs. CI checks Node.js 22/24, packed consumers, and reproducible generated files. BigInt is used by tests as a reference, not by the runtime implementation.
+
+Arithmetic improvements remove repeated suffix slicing during division, combine decimal multiplication and addition into one carry pass, and replace repeated alphabet scans with a lookup table. The benchmark prints timings for large and small inputs; results depend on the engine and workload. Conversion still requires work proportional to the input and output lengths and is unsuitable for unbounded untrusted inputs.
+
+This PR does not publish a version. Stricter rejection of unsafe numbers or invalid alphabets, Unicode code-point alphabets, and canonical validation would need explicit compatibility decisions in a later release.
+
+## License
+
+[MIT](LICENSE)
