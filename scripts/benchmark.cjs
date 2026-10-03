@@ -32,9 +32,22 @@ const cases = [
   ['encode small integer (base62)', () => legacy.encode(19901230), () => current.encode(19901230), 20000],
   ['decode small integer (base62)', () => legacy.decode('1lvXA'), () => current.decode('1lvXA'), 20000],
 ];
+const hexadecimal = new Current('0123456789abcdef');
+const bmp = new Current('中国上海市徐汇区');
+const unicodeBMP = new Current('中国上海市徐汇区', { unicode: true });
+const emoji = new Current('😀😁😂😃😊🚀中国', { unicode: true });
+const bmpEncoded = bmp.encode(decimal);
+const emojiEncoded = emoji.encode(decimal);
+cases.push(
+  ['plain vs strict encode (1,000 digits)', () => current.encode(decimal), () => current.encodeStrict(decimal), 10],
+  ['plain vs strict encode (small integer)', () => current.encode(19901230), () => current.encodeStrict(19901230), 10000],
+  ['manual strict pipeline vs convert (1,000 digits)', () => hexadecimal.encodeStrict(current.decodeStrict(encoded)), () => current.convert(encoded, hexadecimal), 10],
+  ['UTF16 vs Unicode BMP decode (1,000 digits)', () => bmp.decode(bmpEncoded), () => unicodeBMP.decode(bmpEncoded), 10],
+  ['BMP vs emoji code-point decode (1,000 digits)', () => unicodeBMP.decode(bmpEncoded), () => emoji.decode(emojiEncoded), 10],
+);
 console.log(`Node ${process.version}; median of 7 alternating paired samples, milliseconds per operation`);
 for (const [name, before, after, iterations] of cases) {
   assert.deepEqual(after(), before());
   const [oldMs, newMs] = measurePair(before, after, iterations);
-  console.log(`${name}: old=${oldMs.toFixed(4)} new=${newMs.toFixed(4)} ratio=${(oldMs / newMs).toFixed(2)}x`);
+  console.log(`${name}: before=${oldMs.toFixed(6)} after=${newMs.toFixed(6)} ratio=${(oldMs / newMs).toFixed(2)}x`);
 }

@@ -146,6 +146,9 @@ for (const file of ['numbase.js', 'numbase.min.js']) {
       vm.runInNewContext(source, sandbox);
       const Constructor = sandbox.window ? sandbox.window.NumBase : sandbox.NumBase;
       assert.equal(new Constructor().decode(new Constructor().encode(huge)), huge);
+      const emoji = new Constructor('😀😁😂😃', { unicode: true });
+      assert.equal(emoji.decodeStrict(emoji.encodeStrict('27')), '27');
+      assert.equal(new Constructor('0123456789abcdef').convert('1b', emoji), '😁😂😃');
     }
     for (const loader of ['amd', 'cmd']) {
       let Constructor;
@@ -153,6 +156,7 @@ for (const file of ['numbase.js', 'numbase.min.js']) {
       define[loader] = true;
       vm.runInNewContext(source, { define });
       assert.equal(new Constructor().encode(huge), encodedHuge);
+      assert.equal(new Constructor('😀😁', { unicode: true }).decodeStrict('😁😁'), '3');
     }
   });
 }

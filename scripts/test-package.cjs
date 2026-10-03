@@ -25,6 +25,10 @@ function command(args) {
     assert.equal(new (require(root + '/dist/numbase'))().encode('10'), 'a');
     const esm = await import(pathToFileURL(root + '/dist/numbase.mjs'));
     assert.equal(new esm.default().decode('a'), '10');
+    const emoji = new esm.default('😀😁😂😃', { unicode: true });
+    assert.equal(emoji.decodeStrict(emoji.encodeStrict(decimal)), decimal);
+    assert.equal(emoji.convert(base.convert(base.encode(decimal), emoji), base), base.encode(decimal));
+    assert.throws(() => base.encodeStrict(Number.MAX_SAFE_INTEGER + 1), TypeError);
     const pkg = require(root + '/package.json');
     assert.ok(fs.existsSync(path.join(root, pkg.types)));
     assert.ok(fs.existsSync(path.join(root, 'dist/numbase.d.mts')));
