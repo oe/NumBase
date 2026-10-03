@@ -12,6 +12,10 @@
 //#region src/numbase.ts
 /** Convert decimal integers and strings in a custom radix without Number rounding. */
 var DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function hasStandardDigits(alphabet, radix) {
+	for (var i = 0; i < radix; i++) if (alphabet[i] !== DEFAULT_ALPHABET.charAt(i)) return false;
+	return true;
+}
 function isInteger(value) {
 	return /^-?\d+$/.test("" + value);
 }
@@ -74,7 +78,13 @@ var NumBase = function() {
 			if (options === null || typeof options !== "object") throw new TypeError("options must be an object");
 			if (options.unicode !== void 0 && typeof options.unicode !== "boolean") throw new TypeError("unicode must be a boolean");
 		}
-		Object.defineProperty(this, "unicode", { value: (options === null || options === void 0 ? void 0 : options.unicode) === true });
+		Object.defineProperties(this, {
+			unicode: { value: (options === null || options === void 0 ? void 0 : options.unicode) === true },
+			validatedAlphabet: {
+				value: [],
+				writable: true
+			}
+		});
 		var characters = charList || DEFAULT_ALPHABET;
 		if (this.unicode && typeof characters !== "string") throw new TypeError("Unicode alphabet must be a string");
 		var alphabet = this.unicode ? unicodeSymbols(characters) : characters.split("");
@@ -108,6 +118,16 @@ var NumBase = function() {
 			} while (value);
 			return sign + result.reverse().join("");
 		}
+		if (typeof BigInt === "function" && base <= 4294967295 && !/[^0-9]/.test(decimal)) {
+			var value = BigInt(decimal);
+			if (base <= 36 && hasStandardDigits(this.BASE, base)) return sign + value.toString(base);
+			var bigRadix = BigInt(base);
+			do {
+				result.push(this.BASE[Number(value % bigRadix)] + "");
+				value /= bigRadix;
+			} while (value);
+			return sign + result.reverse().join("");
+		}
 		while (decimal) {
 			var divided = divide(decimal, base);
 			result.push(this.BASE[divided.mod] + "");
@@ -127,7 +147,7 @@ var NumBase = function() {
 		}
 		var symbols = this.unicode ? unicodeSymbols(input) : input;
 		var indexes;
-		if (symbols.length >= 8) {
+		if (symbols.length >= 32) {
 			var lookup = Object.create(null);
 			indexes = lookup;
 			for (var i = 0; i < this.BASE.length; i++) {
@@ -135,15 +155,25 @@ var NumBase = function() {
 				if (typeof symbol === "string" && (symbol.length === 1 || this.unicode) && lookup[symbol] === void 0) lookup[symbol] = i;
 			}
 		}
+		var bigRadix = typeof BigInt === "function" && base <= 4294967295 ? BigInt(base) : void 0;
+		var integer = 0;
+		var large;
 		var result = "0";
 		for (var j = 0; j < symbols.length; j++) {
 			var character = symbols[j];
 			var digit = indexes ? indexes[character] : this.BASE.indexOf(character);
 			if (digit === void 0 || digit === -1) throw new TypeError("unexpected character <" + character + "> found");
 			if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
-			result = multiplyAdd(result, base, digit);
+			if (bigRadix !== void 0) {
+				if (large !== void 0) large = large * bigRadix + BigInt(digit);
+				else {
+					var next = integer * base + digit;
+					if (next <= 9007199254740991) integer = next;
+					else large = BigInt(integer) * bigRadix + BigInt(digit);
+				}
+			} else result = multiplyAdd(result, base, digit);
 		}
-		return sign + result;
+		return sign + (bigRadix === void 0 ? result : large === void 0 ? String(integer) : String(large));
 	};
 	/** Encode exact integer input, rejecting unsafe numbers and invalid configuration. */
 	NumBase.prototype.encodeStrict = function(value, radix) {
@@ -170,13 +200,18 @@ var NumBase = function() {
 	};
 	NumBase.prototype.strictRadix = function(radix) {
 		if (!Array.isArray(this.BASE) || this.BASE.length < 2) throw new TypeError("strict conversion requires at least two alphabet symbols");
-		var seen = Object.create(null);
-		for (var _i = 0, _a = this.BASE; _i < _a.length; _i++) {
-			var symbol = _a[_i];
-			if (typeof symbol !== "string" || (this.unicode ? !isUnicodeSymbol(symbol) : symbol.length !== 1)) throw new TypeError("alphabet entries must each contain one symbol");
-			if (symbol === "-") throw new TypeError("alphabet must not contain the negative sign");
-			if (seen[symbol]) throw new TypeError("alphabet symbols must be unique");
-			seen[symbol] = true;
+		var unchanged = this.BASE.length === this.validatedAlphabet.length;
+		for (var i = 0; unchanged && i < this.BASE.length; i++) unchanged = this.BASE[i] === this.validatedAlphabet[i];
+		if (!unchanged) {
+			var seen = Object.create(null);
+			for (var _i = 0, _a = this.BASE; _i < _a.length; _i++) {
+				var symbol = _a[_i];
+				if (typeof symbol !== "string" || (this.unicode ? !isUnicodeSymbol(symbol) : symbol.length !== 1)) throw new TypeError("alphabet entries must each contain one symbol");
+				if (symbol === "-") throw new TypeError("alphabet must not contain the negative sign");
+				if (seen[symbol]) throw new TypeError("alphabet symbols must be unique");
+				seen[symbol] = true;
+			}
+			this.validatedAlphabet = this.BASE.slice();
 		}
 		var base = radix === void 0 ? this.MAX_BASE : radix;
 		if (typeof this.MAX_BASE !== "number" || Math.floor(this.MAX_BASE) !== this.MAX_BASE || this.MAX_BASE < 2 || this.MAX_BASE > this.BASE.length) throw new RangeError("MAX_BASE must be an integer within the alphabet");

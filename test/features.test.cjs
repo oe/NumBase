@@ -83,6 +83,41 @@ test('strict operations revalidate mutable alphabets and configuration', () => {
   }
 });
 
+test('strict validation detects edits after successful calls and recovers after repair', () => {
+  const base = new NumBase('0123');
+  assert.equal(base.encodeStrict('15'), '33');
+  assert.equal(base.decodeStrict('33'), '15');
+  for (const symbol of ['0', '-', 'ab', undefined]) {
+    base.BASE[1] = symbol;
+    assert.throws(() => base.encodeStrict('1'), TypeError);
+    assert.throws(() => base.decodeStrict('1'), TypeError);
+    base.BASE[1] = '1';
+    assert.equal(base.encodeStrict('1'), '1');
+  }
+  base.BASE.reverse();
+  assert.equal(base.encodeStrict('1'), '2');
+  assert.equal(base.decodeStrict('2'), '1');
+  base.BASE = ['a', 'b', 'c', 'd'];
+  assert.equal(base.encodeStrict('15'), 'dd');
+  base.BASE.pop();
+  assert.throws(() => base.encodeStrict('1'), RangeError);
+  base.MAX_BASE = 3;
+  assert.equal(base.decodeStrict('c'), '2');
+  base.MAX_BASE = 2.5;
+  assert.throws(() => base.decodeStrict('c'), RangeError);
+  base.MAX_BASE = 3;
+  base.BASE.length = 4; // A hole must not be mistaken for a cached valid symbol.
+  assert.throws(() => base.encodeStrict('1'), TypeError);
+  assert.deepEqual(Object.keys(base), ['BASE', 'MAX_BASE']);
+
+  const unicode = new NumBase('😀😁', { unicode: true });
+  assert.equal(unicode.encodeStrict('1'), '😁');
+  unicode.BASE[1] = '\ud800';
+  assert.throws(() => unicode.encodeStrict('1'), TypeError);
+  unicode.BASE[1] = '😂';
+  assert.equal(unicode.decodeStrict('😂'), '1');
+});
+
 test('convert handles huge values, signs, normalization, and explicit radices', () => {
   const source = new NumBase('0123456789abcdef');
   const target = new NumBase();

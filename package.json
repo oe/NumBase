@@ -1,7 +1,7 @@
 {
   "name": "numbase",
   "version": "0.1.2",
-  "description": "Convert arbitrary-size decimal integers to and from custom radix alphabets, without runtime dependencies.",
+  "description": "Precision-safe decimal integer and Base62 conversion with custom alphabets. Zero runtime dependencies.",
   "main": "dist/numbase.min.js",
   "repository": {
     "type": "git",
@@ -24,6 +24,10 @@
     "radix",
     "base62",
     "custom-alphabet",
+    "bigint",
+    "integer",
+    "encode",
+    "decode",
     "numbase"
   ],
   "license": "MIT",

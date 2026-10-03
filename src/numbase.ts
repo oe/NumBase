@@ -1,6 +1,13 @@
 /** Convert decimal integers and strings in a custom radix without Number rounding. */
 const DEFAULT_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+function hasStandardDigits(alphabet: string[], radix: number): boolean {
+  for (let i = 0; i < radix; i++) {
+    if (alphabet[i] !== DEFAULT_ALPHABET.charAt(i)) return false;
+  }
+  return true;
+}
+
 function isInteger(value: unknown) {
   // Keep legacy string coercion, including its TypeError for Symbols.
   return /^-?\d+$/.test('' + (value as string));
@@ -86,6 +93,7 @@ export default class NumBase {
   BASE: string[];
   MAX_BASE: number;
   private readonly unicode!: boolean;
+  private validatedAlphabet!: string[];
 
   constructor(charList?: string | null, options?: NumBaseOptions) {
     if (options !== undefined) {
@@ -95,7 +103,10 @@ export default class NumBase {
       }
     }
     // Keep one object layout for both modes without adding enumerable public state.
-    Object.defineProperty(this, 'unicode', { value: options?.unicode === true });
+    Object.defineProperties(this, {
+      unicode: { value: options?.unicode === true },
+      validatedAlphabet: { value: [], writable: true },
+    });
     const characters = charList || DEFAULT_ALPHABET;
     if (this.unicode && typeof characters !== 'string') throw new TypeError('Unicode alphabet must be a string');
     const alphabet = this.unicode ? unicodeSymbols(characters) : characters.split('');
@@ -141,6 +152,18 @@ export default class NumBase {
       } while (value);
       return sign + result.reverse().join('');
     }
+    // No bigint literals: these entries must still parse in ES5 environments.
+    // Keep unusual legacy coercions and oversized mutated radices on the old path.
+    if (typeof BigInt === 'function' && base <= 4294967295 && !/[^0-9]/.test(decimal)) {
+      let value = BigInt(decimal);
+      if (base <= 36 && hasStandardDigits(this.BASE, base)) return sign + value.toString(base);
+      const bigRadix = BigInt(base);
+      do {
+        result.push(this.BASE[Number(value % bigRadix)] + '');
+        value /= bigRadix;
+      } while (value);
+      return sign + result.reverse().join('');
+    }
     while (decimal) {
       const divided = divide(decimal, base);
       result.push(this.BASE[divided.mod] + '');
@@ -165,7 +188,7 @@ export default class NumBase {
     // Rebuild per call: BASE is public and its legacy mutability is preserved.
     // For a few symbols, direct scans avoid the cost of building a full lookup.
     let indexes: Record<string, number | undefined> | undefined;
-    if (symbols.length >= 8) {
+    if (symbols.length >= 32) {
       const lookup: Record<string, number | undefined> = Object.create(null);
       indexes = lookup;
       for (let i = 0; i < this.BASE.length; i++) {
@@ -175,15 +198,28 @@ export default class NumBase {
         }
       }
     }
+    const bigRadix = typeof BigInt === 'function' && base <= 4294967295 ? BigInt(base) : undefined;
+    let integer = 0;
+    let large: bigint | undefined;
     let result = '0';
     for (let j = 0; j < symbols.length; j++) {
       const character = symbols[j];
       const digit = indexes ? indexes[character] : this.BASE.indexOf(character);
       if (digit === undefined || digit === -1) throw new TypeError('unexpected character <' + character + '> found');
       if (digit >= base) throw new TypeError('<' + character + '> is out of the base limit');
-      result = multiplyAdd(result, base, digit);
+      if (bigRadix !== undefined) {
+        if (large !== undefined) {
+          large = large * bigRadix + BigInt(digit);
+        } else {
+          const next = integer * base + digit;
+          if (next <= 9007199254740991) integer = next;
+          else large = BigInt(integer) * bigRadix + BigInt(digit);
+        }
+      } else {
+        result = multiplyAdd(result, base, digit);
+      }
     }
-    return sign + result;
+    return sign + (bigRadix === undefined ? result : large === undefined ? String(integer) : String(large));
   }
 
   /** Encode exact integer input, rejecting unsafe numbers and invalid configuration. */
@@ -226,14 +262,22 @@ export default class NumBase {
     if (!Array.isArray(this.BASE) || this.BASE.length < 2) {
       throw new TypeError('strict conversion requires at least two alphabet symbols');
     }
-    const seen: Record<string, boolean | undefined> = Object.create(null);
-    for (const symbol of this.BASE) {
-      if (typeof symbol !== 'string' || (this.unicode ? !isUnicodeSymbol(symbol) : symbol.length !== 1)) {
-        throw new TypeError('alphabet entries must each contain one symbol');
+    // Compare contents, not array identity: callers may edit BASE in place.
+    let unchanged = this.BASE.length === this.validatedAlphabet.length;
+    for (let i = 0; unchanged && i < this.BASE.length; i++) {
+      unchanged = this.BASE[i] === this.validatedAlphabet[i];
+    }
+    if (!unchanged) {
+      const seen: Record<string, boolean | undefined> = Object.create(null);
+      for (const symbol of this.BASE) {
+        if (typeof symbol !== 'string' || (this.unicode ? !isUnicodeSymbol(symbol) : symbol.length !== 1)) {
+          throw new TypeError('alphabet entries must each contain one symbol');
+        }
+        if (symbol === '-') throw new TypeError('alphabet must not contain the negative sign');
+        if (seen[symbol]) throw new TypeError('alphabet symbols must be unique');
+        seen[symbol] = true;
       }
-      if (symbol === '-') throw new TypeError('alphabet must not contain the negative sign');
-      if (seen[symbol]) throw new TypeError('alphabet symbols must be unique');
-      seen[symbol] = true;
+      this.validatedAlphabet = this.BASE.slice();
     }
     const base = radix === undefined ? this.MAX_BASE : radix;
     if (typeof this.MAX_BASE !== 'number' || Math.floor(this.MAX_BASE) !== this.MAX_BASE || this.MAX_BASE < 2 || this.MAX_BASE > this.BASE.length) {

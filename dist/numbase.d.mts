@@ -14,6 +14,7 @@ export default class NumBase {
     BASE: string[];
     MAX_BASE: number;
     private readonly unicode;
+    private validatedAlphabet;
     constructor(charList?: string | null, options?: NumBaseOptions);
     encode(value: string, radix?: Radix): string;
     encode(value: number, radix?: Radix): string | number;

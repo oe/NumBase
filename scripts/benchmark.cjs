@@ -10,6 +10,23 @@ const currentLarge = new Current(largeAlphabet);
 const legacyLarge = new Legacy(largeAlphabet);
 const encoded = legacy.encode(decimal);
 const encodedLarge = legacyLarge.encode(decimal);
+const alphabet = current.BASE.join('');
+const digitIndexes = Object.fromEntries(Array.from(alphabet, (symbol, i) => [symbol, BigInt(i)]));
+// A minimal positive-integer reference, with the same Base62 alphabet.
+function nativeEncode(decimal) {
+  let value = BigInt(decimal);
+  const digits = [];
+  do {
+    digits.push(alphabet[Number(value % 62n)]);
+    value /= 62n;
+  } while (value);
+  return digits.reverse().join('');
+}
+function nativeDecode(encoded) {
+  let value = 0n;
+  for (const symbol of encoded) value = value * 62n + digitIndexes[symbol];
+  return value.toString();
+}
 function measurePair(before, after, iterations) {
   const functions = [before, after];
   for (let i = 0; i < 10; i++) { before(); after(); }
@@ -46,8 +63,42 @@ cases.push(
   ['BMP vs emoji code-point decode (1,000 digits)', () => unicodeBMP.decode(bmpEncoded), () => emoji.decode(emojiEncoded), 10],
 );
 console.log(`Node ${process.version}; median of 7 alternating paired samples, milliseconds per operation`);
+console.log('Selected baseline vs current (or the two named paths for feature overhead):');
 for (const [name, before, after, iterations] of cases) {
   assert.deepEqual(after(), before());
   const [oldMs, newMs] = measurePair(before, after, iterations);
   console.log(`${name}: before=${oldMs.toFixed(6)} after=${newMs.toFixed(6)} ratio=${(oldMs / newMs).toFixed(2)}x`);
+}
+console.log('Practical IDs: selected baseline vs current');
+for (const [name, value] of [
+  ['small integer control', '19901230'],
+  ['64-bit ID', '18446744073709551615'],
+  ['128-bit ID', '340282366920938463463374607431768211455'],
+]) {
+  const encoded = current.encode(value);
+  for (const [operation, before, after] of [
+    ['encode', () => legacy.encode(value), () => current.encode(value)],
+    ['decode', () => legacy.decode(encoded), () => current.decode(encoded)],
+    ['strict encode', () => legacy.encodeStrict ? legacy.encodeStrict(value) : legacy.encode(value), () => current.encodeStrict(value)],
+  ]) {
+    assert.equal(after(), before());
+    const [oldMs, newMs] = measurePair(before, after, 5000);
+    console.log(`${name} ${operation}: baseline=${oldMs.toFixed(6)} current=${newMs.toFixed(6)} ratio=${(oldMs / newMs).toFixed(2)}x`);
+  }
+}
+console.log('Minimal BigInt reference vs current: identical positive Base62 values, reference excludes validation');
+for (const [name, value, iterations] of [
+  ['64-bit ID', '18446744073709551615', 5000],
+  ['128-bit ID', '340282366920938463463374607431768211455', 5000],
+  ['1,000 decimal digits', decimal, 10],
+]) {
+  const encoded = current.encode(value);
+  for (const [operation, reference, after] of [
+    ['encode', () => nativeEncode(value), () => current.encode(value)],
+    ['decode', () => nativeDecode(encoded), () => current.decode(encoded)],
+  ]) {
+    assert.equal(after(), reference());
+    const [referenceMs, currentMs] = measurePair(reference, after, iterations);
+    console.log(`${name} ${operation}: reference=${referenceMs.toFixed(6)} current=${currentMs.toFixed(6)} ratio=${(referenceMs / currentMs).toFixed(2)}x`);
+  }
 }

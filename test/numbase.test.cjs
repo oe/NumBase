@@ -177,3 +177,46 @@ test('legacy browser/CommonJS bundles retain ES5 syntax', () => {
     parse(fs.readFileSync(path.join(__dirname, '../dist/', file), 'utf8'), { ecmaVersion: 5 });
   }
 });
+
+test('native arithmetic and no-BigInt bundles preserve exact results and legacy edge cases', () => {
+  const constructors = [NumBase];
+  for (const file of ['numbase.js', 'numbase.min.js']) {
+    const sandbox = { BigInt: undefined };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../dist/', file), 'utf8'), sandbox);
+    constructors.push(sandbox.NumBase);
+  }
+  const values = ['0', '-0', '0'.repeat(40), '-' + '0'.repeat(40),
+    '999999999999999', '1000000000000000', '9007199254740991',
+    '9007199254740992', '9007199254740993', '-9007199254740993',
+    '18446744073709551615', '340282366920938463463374607431768211455', huge];
+  for (const Constructor of constructors) {
+    const base = new Constructor();
+    for (let radix = 2; radix <= 62; radix++) {
+      for (const decimal of values) {
+        const normalized = decimal[0] === '-' && BigInt(decimal) === 0n ? '-0' : BigInt(decimal).toString();
+        const encoded = (decimal[0] === '-' && BigInt(decimal) === 0n ? '-' : '') + referenceEncode(decimal, base.BASE, radix);
+        assert.equal(base.encodeStrict(decimal, radix), encoded);
+        assert.equal(base.decodeStrict(encoded, radix), normalized);
+      }
+    }
+    const old = new Legacy();
+    for (const value of ['12\n', '9007199254740993\n', '9007199254740993\r', '9007199254740993\u2028', '9007199254740993\u2029']) {
+      assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
+    }
+    base.BASE = ['a', undefined, 'c'];
+    old.BASE = ['a', undefined, 'c'];
+    base.MAX_BASE = old.MAX_BASE = 3;
+    assert.deepEqual(outcome(() => base.encode(huge)), outcome(() => old.encode(huge)));
+    // Mutated radices beyond array length still use the historical behavior;
+    // stay within exact carry arithmetic when comparing the 2016 reference.
+    for (const maximum of [4294967295, 4294967296, 900719925474099]) {
+      base.MAX_BASE = old.MAX_BASE = maximum;
+      assert.deepEqual(outcome(() => base.decode('cccccccc')), outcome(() => old.decode('cccccccc')));
+      assert.deepEqual(outcome(() => base.encode(huge)), outcome(() => old.encode(huge)));
+    }
+    const emoji = new Constructor('😀😁😂😃', { unicode: true });
+    const encoded = referenceEncode(huge, Array.from('😀😁😂😃'), 4);
+    assert.equal(emoji.encodeStrict(huge), encoded);
+    assert.equal(emoji.decodeStrict(encoded), huge);
+  }
+});

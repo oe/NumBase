@@ -1,8 +1,8 @@
 # NumBase
 
-Convert arbitrary-size decimal integers to and from a custom radix alphabet. NumBase keeps large integers as strings and uses an exact numeric fast path for inputs of at most 15 decimal digits. It has no runtime dependencies, and works with CommonJS, browser scripts, and AMD/CMD loaders.
+Precision-safe conversion between decimal integers and custom radix alphabets. Turn a large database ID into a compact Base62 code, recover its exact decimal value, or convert between alphabets. Zero runtime dependencies.
 
-> Maintenance preview: this branch adopts TypeScript development and Vite + pnpm builds, adds strict validation, alphabet-to-alphabet conversion, Unicode mode, and TypeScript/native ESM entries, and optimizes string arithmetic. npm currently contains version 0.1.1; the repository's existing version is 0.1.2. These changes have not been published.
+> Maintenance preview: npm currently ships 0.1.1. This unpublished branch adds strict APIs, TypeScript declarations, native ESM, Unicode mode, and faster arithmetic. Its repository version remains 0.1.2.
 
 ## Quick start
 
@@ -13,121 +13,118 @@ npm install numbase
 
 ```js
 const NumBase = require('numbase');
-const base = new NumBase(); // default alphabet: 0–9, a–z, A–Z (base62)
+const base62 = new NumBase(); // 0–9, a–z, A–Z
 
-const decimal = '9999999999999999999999999999999999999999999999999999999999999999';
-const encoded = base.encode(decimal);
-console.log(encoded); // isFUl3RMFVGKeLAbPmHOAA86LLjpGwei1jXh
-console.log(base.decode(encoded)); // original decimal string
-
-const chinese = new NumBase('中国上海市徐汇区');
-console.log(chinese.encode(19901230)); // 国国海区上徐市徐汇
-console.log(chinese.decode('国国海区上徐市徐汇')); // '19901230'
-console.log(chinese.encode(19901230, 7)); // 海海国国中徐中海汇
+// Keep a database's 64-bit integer ID as a decimal string.
+const id = '18446744073709551615';
+const code = base62.encode(id); // 'lYGhA16ahyf'
+base62.decode(code); // '18446744073709551615', without Number rounding
 ```
 
-Always pass integers outside JavaScript's safe `Number` range as decimal strings. `9007199254740993` as a numeric literal is already rounded before NumBase receives it; `'9007199254740993'` remains exact. Numeric values formatted with positive exponential notation are rejected, but smaller unsafe numbers retain their historical acceptance in `encode()`. Use `encodeStrict()` to reject them. The API does not recover precision lost before the call.
+Use decimal strings for large integers: the numeric literal `9007199254740993` is rounded before any library receives it. For new integrations with this maintenance version, prefer `encodeStrict()` and `decodeStrict()`: they return a string or throw, and reject unsafe Numbers instead of accepting a rounded value.
 
-## API and compatibility
+## Practical examples — maintenance APIs
 
-| API | Behavior |
-| --- | --- |
-| `new NumBase(alphabet?, options?)` | Default alphabet is `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`. Duplicate characters throw `TypeError`; an empty or omitted alphabet selects the default. |
-| `encode(decimal, radix?)` | Convert an integer to alphabet symbols. Defaults to the alphabet length. Valid integer strings return strings; invalid inputs or radices pass through unchanged. |
-| `decode(encoded, radix?)` | Return a decimal string. Invalid radices pass the input through unchanged. Unknown symbols or digits outside the selected radix throw `TypeError`. |
-| `encodeStrict(decimal, radix?)` | Encode a decimal string, safe integer Number, or bigint with strict validation; always return a string or throw. |
-| `decodeStrict(encoded, radix?)` | Decode a nonempty encoded string with strict validation; always return a string or throw. |
-| `convert(encoded, target, options?)` | Convert an encoded integer to another NumBase alphabet with strict checks on both ends. |
-| `BASE` / `MAX_BASE` | Public alphabet array and default radix. Their existing mutability is retained; keep them consistent when changing them. |
-
-The radix must be an integer from 2 through the alphabet length. Numeric strings such as `'16'` and null/undefined defaults keep their legacy behavior. A smaller radix uses the first `radix` symbols. Negative integers use a leading `-`; string negative zero remains `'-0'`. Decimal leading zeros are discarded by encoding, and leading zero symbols are discarded by decoding. Legacy `decode('')` returns `'0'` and `decode('-')` returns `'-0'`.
-
-By default, the alphabet uses **UTF-16 code units**, preserving existing encodings. Chinese BMP characters work; emoji and other supplementary characters need the explicit Unicode mode below. Do not include `-` in a new alphabet: it conflicts with the negative sign. The legacy constructor still accepts it for compatibility. An alphabet with one symbol cannot perform conversion; its invalid radix causes input passthrough.
-
-This is integer representation conversion. It is not encryption or a general lossless text codec: leading zero symbols are lost, and a leading `-` has special meaning. Store any required original length separately.
-
-## Strict conversion — maintenance preview
+### Encode IDs with an alphabet that avoids ambiguous letters
 
 ```js
-const hexadecimal = new NumBase('0123456789abcdef');
-hexadecimal.encodeStrict('9007199254740993'); // exact decimal string
-hexadecimal.encodeStrict(9007199254740993n); // exact bigint, in supporting runtimes
-hexadecimal.decodeStrict('ff'); // '255'
-hexadecimal.encodeStrict(9007199254740993); // throws: the Number is already unsafe
-hexadecimal.decodeStrict(''); // throws: missing digits
-hexadecimal.encodeStrict('10', '16'); // throws: strict radices must be numeric
+const readable = new NumBase('0123456789ABCDEFGHJKMNPQRSTVWXYZ');
+readable.encodeStrict('18446744073709551615'); // 'FZZZZZZZZZZZZ'
+readable.decodeStrict('FZZZZZZZZZZZZ'); // '18446744073709551615'
+readable.encodeStrict(9007199254740993); // throws: unsafe Number
+readable.encodeStrict(9007199254740993n); // exact, in BigInt-capable runtimes
 ```
 
-The strict methods reject fractional, non-finite, or unsafe Numbers; malformed decimal strings (including whitespace, `+`, decimals, and exponents); and empty/sign-only encoded strings. Strict radices must be numeric integers from 2 through `MAX_BASE`; omit the radix to use the default. Unknown or out-of-range encoded symbols also throw. Leading zeros remain accepted and normalized, and string negative zero remains `'-0'`.
-
-Strict calls revalidate the public configuration each time: `BASE` must contain at least two distinct symbols of the selected character mode, with no `-`; `MAX_BASE` must be an integer from 2 through `BASE.length`. It may select a smaller prefix of the alphabet. Invalid values/alphabets throw `TypeError`; invalid radices or `MAX_BASE` throw `RangeError`. This validation adds work proportional to the alphabet size, so it is opt-in. Existing `encode()` and `decode()` retain their passthrough behavior.
-
-## Convert between alphabets — maintenance preview
+### Convert hexadecimal integers to Base62
 
 ```js
 const hexadecimal = new NumBase('0123456789abcdef');
 const base62 = new NumBase();
-hexadecimal.convert('ff', base62); // '47' (255 in base62)
+hexadecimal.convert('ff', base62); // '47'
 hexadecimal.convert('1010', base62, { sourceRadix: 2, targetRadix: 8 }); // '12'
 ```
 
-`source.convert(encoded, target, { sourceRadix?, targetRadix? })` validates both sides strictly and always returns a string. It composes `decodeStrict()` and `encodeStrict()` using an exact decimal string between them; it does not convert large integers through Number and does not claim a faster conversion algorithm. Omitted radices use the respective instance defaults. Negative signs are preserved, and leading zero symbols are normalized. CommonJS and native ESM instances interoperate.
+`convert()` composes strict decoding and encoding through an exact decimal string. Omitted radices use each instance's default. It preserves negative signs and normalizes leading zeros; CommonJS and ESM instances interoperate.
 
-## Unicode mode — maintenance preview
+## When to use NumBase
+
+| Need | Suitable choice |
+| --- | --- |
+| Standard radix 2–36 output in a modern runtime | Native `BigInt(value).toString(radix)` usually suffices. |
+| Exact decimal strings, custom alphabets, Base62, or signed integer conversion | NumBase keeps these operations behind one small API. |
+| Arithmetic beyond representation conversion | A general-purpose big-integer library. |
+| Encode bytes or arbitrary text, preserving leading zeros | A byte codec such as `base-x`, or the relevant standard encoding. |
+
+NumBase converts integer representations. It does not generate IDs, encrypt values, or encode arbitrary text losslessly. Leading zeros are normalized and `-` denotes a negative sign. Alphabet order determines the output: other Base62 libraries may order uppercase and lowercase differently. Store the alphabet and character mode alongside persisted encodings.
+
+## API
+
+| API | Behavior |
+| --- | --- |
+| `new NumBase(alphabet?, { unicode? }?)` | Default alphabet is `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`. Duplicates throw; an omitted or empty alphabet selects the default. |
+| `encode(decimal, radix?)` | Encode an integer. Invalid inputs or radices pass through unchanged for legacy compatibility. |
+| `decode(encoded, radix?)` | Return a decimal string. Invalid radices pass through; unknown or out-of-range symbols throw. |
+| `encodeStrict(decimal, radix?)` | Accept a decimal string, safe integer Number, or bigint; return a string or throw. |
+| `decodeStrict(encoded, radix?)` | Require a nonempty encoded integer; return a decimal string or throw. |
+| `convert(encoded, target, { sourceRadix?, targetRadix? }?)` | Convert to another alphabet with strict checks on both ends. |
+| `BASE` / `MAX_BASE` | Public, mutable alphabet array and default radix, retained for compatibility. |
+
+A radix selects the first `radix` symbols and must be an integer from 2 through `MAX_BASE`. Strict radices must be numbers. Strict methods reject unsafe/fractional/non-finite Numbers, malformed decimal strings (whitespace, `+`, decimals, exponents), and empty/sign-only encoded input. Leading zeros are accepted and normalized; string negative zero stays `'-0'`.
+
+Strict alphabets must contain at least two distinct symbols, each a single character in the selected mode, with no `-`. `MAX_BASE` must be an integer from 2 through `BASE.length`. Invalid input or alphabets throw `TypeError`; invalid radices or `MAX_BASE` throw `RangeError`.
+
+Strict calls compare alphabet contents with a validated snapshot. Changes, including in-place edits, trigger full validation; unchanged alphabets avoid rebuilding the duplicate-check table. Radices and `MAX_BASE` are checked on every call. The content comparison remains proportional to alphabet length. Reuse instances for repeated conversions.
+
+### Legacy behavior
+
+The existing `encode()` and `decode()` keep coercion and passthrough rules, numeric-string radices such as `'16'`, and null/undefined defaults. Unsafe Numbers below positive exponential notation remain accepted by `encode()`; strict encoding rejects them. `decode('')` returns `'0'`, `decode('-')` returns `'-0'`, and string negative zero is preserved. A one-symbol alphabet cannot convert; the legacy constructor still accepts `-`, which conflicts with the negative sign.
+
+## Unicode alphabets
+
+By default, alphabets use UTF-16 code units, preserving historical encodings. Chinese BMP characters work directly. Opt in to code points for emoji or other supplementary characters:
 
 ```js
 const emoji = new NumBase('😀😁😂😃', { unicode: true });
-emoji.MAX_BASE; // 4, not 8 UTF-16 code units
+emoji.MAX_BASE; // 4
 emoji.encodeStrict('27'); // '😁😂😃'
 emoji.decodeStrict('😁😂😃'); // '27'
-new NumBase('0123456789abcdef').convert('1b', emoji); // '😁😂😃'
 ```
 
-Unicode mode counts **code points**, preserves symbol order, and rejects unpaired surrogates. The mode is fixed at construction; options must be an object, and the Unicode alphabet must be a string. Each code point is one digit; this does not group grapheme clusters, normalize text, or treat a flag, skin-tone sequence, or ZWJ emoji as a single digit. For example, `🇨🇳` contains two code points. Duplicate code points still throw. UTF-16 mode remains the default, and existing BMP alphabets have identical encodings in both modes. Keep the mode alongside any persisted custom alphabet so another reader uses the same rules.
+The mode is fixed at construction. Unicode mode rejects unpaired surrogates and counts code points; it does not normalize text or group grapheme clusters, flags, skin-tone sequences, or ZWJ emoji. For example, `🇨🇳` contains two digits. Its ES5-compatible scanner needs no iterator or `Array.from` polyfill.
 
-Unicode parsing uses an ES5-compatible surrogate scanner, with no iterator or `Array.from` polyfill. BigInt inputs are optional; the conversion algorithm does not require BigInt support.
+## Modules and TypeScript
 
-## Browser and module usage
-
-Include `dist/numbase.min.js` as a script to expose `window.NumBase`. The existing AMD/CMD loader and `require('numbase/dist/numbase')` paths remain available. Existing JavaScript entries remain ES5 syntax.
-
-The maintenance branch adds an opt-in native ESM entry:
-
-```js
-import NumBase from 'numbase/dist/numbase.mjs';
-const base = new NumBase();
-```
-
-The package root keeps its CommonJS constructor export; no restrictive `exports` map is added. Native Node.js imports of the root receive that constructor as the default export.
-
-The maintenance branch also adds declarations for CommonJS and ESM:
+The package root exports the CommonJS constructor. Native Node.js imports also receive it as the default export. This branch adds an explicit ESM entry and generated declarations:
 
 ```ts
-import NumBase = require('numbase');
+import NumBase from 'numbase/dist/numbase.mjs';
 const base = new NumBase();
-const encoded: string = base.encode('9007199254740993');
-const decimal: string = base.decode(encoded);
-// A numeric input can pass through unchanged, so the declared result is string | number.
-const numeric: string | number = base.encode(42);
+const code: string = base.encodeStrict('9007199254740993');
 ```
 
-## Development
+CommonJS TypeScript consumers can use `import NumBase = require('numbase')`. Legacy encoding of a Number has type `string | number`, reflecting passthrough behavior.
 
-Use Node.js 22.12+ or 24 and pnpm 12.8.1, pinned in `package.json`.
+For browser scripts, `dist/numbase.min.js` exposes `window.NumBase`. AMD/CMD loaders and existing deep imports such as `numbase/dist/numbase` remain supported. Existing JavaScript entries retain ES5 syntax, including in environments without BigInt.
+
+## Performance and development
+
+Small encodes use exact Number arithmetic. In BigInt-capable runtimes, larger canonical integers use native arithmetic; standard alphabets also use native radix formatting where possible. Decoding switches from exact Number accumulation to BigInt before exceeding the safe integer range. Without BigInt, decimal-string division and fused multiply/add remain available. Signs, zero normalization, errors, and legacy coercions are covered across both paths.
+
+The string fallback has roughly quadratic cost in digit count at a fixed radix. Native arithmetic improves throughput but does not make input size unlimited; choose input limits appropriate to your application.
+
+Use Node.js 22.12+ or 24 and pnpm 12.8.1:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm check     # build/typecheck source, runtime tests, consumer types, and packed installation
-pnpm typecheck # check source and generated consumer declarations without rebuilding
-pnpm bench     # compare with the checked-in npm 0.1.1 reference
-pnpm audit
+pnpm check     # build, runtime tests, consumer types, packed installation
+pnpm bench     # published baseline, strict overhead, ID workloads, native reference
+# Compare against a previous build:
+pnpm bench /absolute/path/to/previous-numbase.cjs
 ```
 
-Vite bundles the TypeScript source into the existing readable and minified UMD files, an additional `.mjs` entry, and declarations. The Vite distribution plugin preserves the historical AMD/CMD wrapper and ES5 syntax using TypeScript lowering and Terser minification. Declarations are generated from the implementation. Builds are deterministic and do not modify the package version. Tests compare conversions with an independent BigInt oracle and the published 0.1.1 implementation, including unusual legacy inputs. CI checks Node.js 22/24, packed consumers, and reproducible generated files. BigInt is used by tests as a reference and can be accepted as input by strict encoding, but the arithmetic implementation does not depend on it.
+Vite builds strict TypeScript into readable/minified UMD, native ESM, and generated declarations. A small distribution plugin preserves ES5 syntax and the historical loader wrapper. Builds do not change the version. CI checks Node 22/24 and reproducible artifacts. Tests use an independent BigInt oracle, the published 0.1.1 implementation, and bundles with BigInt disabled.
 
-Arithmetic improvements remove repeated suffix slicing during division, combine decimal multiplication and addition into one carry pass, and replace repeated alphabet scans with a lookup table. The benchmark alternates baseline/candidate order over seven paired samples and prints timings for large/small legacy inputs, strict-validation overhead, the conversion pipeline, and Unicode parsing; results depend on the engine and workload. Conversion still requires work proportional to the input and output lengths and is unsuitable for unbounded untrusted inputs.
-
-This PR does not publish a version. The strict methods and Unicode mode are explicit additions; the existing default behavior remains available.
+Benchmarks assert equal outputs, alternate comparison order over seven paired samples, and report median milliseconds per operation. The native reference covers positive Base62 integers with the same alphabet, without NumBase's input validation or compatibility behavior. Results depend on the engine and workload, and do not measure application-level speedups.
 
 ## License
 
