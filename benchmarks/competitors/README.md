@@ -92,9 +92,9 @@ NumBase beat big-integer on the selected conversion workloads, but big-integer p
 
 The reason to choose NumBase is the combination of configurable radix/digit symbols, exact decimal-string conversion and a small focused API. The benchmarks support specific performance statements, not a claim that NumBase is always fastest.
 
-## Unreleased encoding optimization
+## Unreleased conversion optimization
 
-The working-tree candidate keeps the API, validation and digit formats unchanged. It borrows the direct string-prepending approach used by @sindresorhus/base62, avoiding an intermediate array and reverse/join. Its larger improvement comes from extracting several digits per BigInt division: Base62 extracts eight digits at a time. Each remainder is bounded by Number.MAX_SAFE_INTEGER and expanded with exact Number arithmetic; the whole integer remains BigInt. Interior groups retain their zero padding. Radices 2–36 use native formatting with digit-symbol translation for DIY alphabets, including Unicode code points. The decimal-string fallback remains available.
+The working-tree candidate keeps the API, validation and digit formats unchanged. It borrows the direct string-prepending approach used by @sindresorhus/base62, avoiding an intermediate array and reverse/join. Its larger improvement comes from extracting several digits per BigInt division: Base62 extracts eight digits at a time. Each remainder is bounded by Number.MAX_SAFE_INTEGER and expanded with exact Number arithmetic; the whole integer remains BigInt. Interior groups retain their zero padding. Radices 2–36 use native formatting with digit-symbol translation for DIY alphabets, including Unicode code points. For decoding, binary/octal/hexadecimal inputs longer than 15 symbols use native prefixed BigInt parsing after every digit is validated. Custom symbols are translated into standard digits; signs stay outside native parsing so signed zero is preserved. Short inputs and other radices keep the existing accumulation path. The decimal-string fallback remains available.
 
 Reproduce the candidate comparison after building:
 
@@ -112,9 +112,9 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.503 | 0.663 | 1.094 |
-| 128-bit integers | 2.762 | 1.024 | 2.211 |
-| 1,000 decimal digits | 259.625 | 49.879 | 255.440 |
+| 64-bit integers | 1.398 | 0.673 | 1.035 |
+| 128-bit integers | 2.947 | 1.163 | 2.183 |
+| 1,000 decimal digits | 253.272 | 44.948 | 245.844 |
 
 ### Node 22.23.3
 
@@ -122,9 +122,9 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.588 | 0.760 | 1.152 |
-| 128-bit integers | 2.662 | 1.155 | 2.081 |
-| 1,000 decimal digits | 200.989 | 45.146 | 203.702 |
+| 64-bit integers | 1.503 | 0.658 | 1.120 |
+| 128-bit integers | 2.646 | 0.992 | 2.026 |
+| 1,000 decimal digits | 190.587 | 42.163 | 189.073 |
 
 ### Node 24.19.0, materialized output
 
@@ -132,12 +132,27 @@ The following Base62 encoding tables use the same method and inputs as above, ti
 
 | Input | Published 1.1.0 | Unreleased candidate | @sindresorhus/base62 1.0.0 |
 | --- | ---: | ---: | ---: |
-| 64-bit integers | 1.557 | 0.821 | 1.234 |
-| 128-bit integers | 2.808 | 1.344 | 2.303 |
-| 1,000 decimal digits | 254.693 | 52.437 | 252.565 |
+| 64-bit integers | 1.523 | 0.806 | 1.207 |
+| 128-bit integers | 2.611 | 1.307 | 2.347 |
+| 1,000 decimal digits | 250.701 | 47.852 | 250.391 |
 
 The candidate encoded these Base62 datasets faster than both the published baseline and @sindresorhus/base62 in both Node versions. The materialized run includes UTF-8 Buffer allocation for every result, so the benefit survives consuming the actual output bytes rather than only the string length. This extra allocation is specific to that experiment, not part of NumBase's API.
 
-These results support an encoding improvement for the measured workloads; decoding was not optimized. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
+These results support an encoding improvement for the measured workloads. Base62 decoding uses the same accumulation algorithm as published 1.1.0; timing differences are not evidence of a decoding optimization there. They do not establish optimal performance for every radix, alphabet, input type, engine or input length. Native BigInt remains useful for standard radices. No memory or application-wide speedup claim is made.
 
-The candidate passes 34 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. The minified bundle grows from 4,162 to 4,315 bytes (gzip: 1,707 to 1,809 bytes), with no new runtime dependency or per-instance cache.
+The candidate passes 35 Vitest tests with 100% statements, branches, functions and lines, plus consumer-type and packed-distribution checks. Independent integer oracles cover all radices 2–62 with standard/reversed alphabets, large radix powers and zero-filled groups, negative values and emoji. The minified bundle grows from 4,162 to 4,696 bytes (gzip: 1,707 to 1,918 bytes), with no new runtime dependency or per-instance cache.
+
+### Native hexadecimal decoding
+
+The same fresh runs compare decimal-string output after hexadecimal parsing. NumBase validates its configured alphabet before native parsing; the bare BigInt reference has no NumBase validation layer. Units are median microseconds per operation.
+
+| Runtime | Input | Published 1.1.0 | Unreleased candidate | Native BigInt |
+| --- | --- | ---: | ---: | ---: |
+| Node 24 | 64-bit integers | 0.564 | 0.519 | 0.165 |
+| Node 24 | 128-bit integers | 2.124 | 0.942 | 0.246 |
+| Node 24 | 1,000 decimal digits | 150.400 | 40.691 | 18.815 |
+| Node 22 | 64-bit integers | 0.622 | 0.524 | 0.151 |
+| Node 22 | 128-bit integers | 2.213 | 0.975 | 0.244 |
+| Node 22 | 1,000 decimal digits | 180.020 | 41.823 | 19.506 |
+
+For these 1,000-digit values, hexadecimal decoding is approximately 3.7–4.3× faster than published 1.1.0. Bare native BigInt is still approximately 2.1–2.2× faster than the candidate, reflecting the cost of strict alphabet validation and API handling. This is not a claim of zero overhead or equivalent validation contracts.

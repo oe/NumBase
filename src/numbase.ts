@@ -189,6 +189,22 @@ export default class NumBase {
     }
     const symbols = this.unicode ? unicodeSymbols(input) : input;
     const bigRadix = typeof BigInt === 'function' ? BigInt(base) : undefined;
+    // Native BigInt parsing accepts binary, octal and hexadecimal prefixes.
+    // Keep short inputs on the Number path and validate every symbol ourselves.
+    const nativePrefix = bigRadix !== undefined && symbols.length > 15
+      ? base === 2 ? '0b' : base === 8 ? '0o' : base === 16 ? '0x' : ''
+      : '';
+    if (nativePrefix) {
+      let digits = '';
+      for (let j = 0; j < symbols.length; j++) {
+        const character = symbols[j];
+        const digit = this.digitIndexes[character];
+        if (digit === undefined) throw new TypeError('unexpected character <' + character + '> found');
+        if (digit >= base) throw new TypeError('<' + character + '> is out of the base limit');
+        if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
+      }
+      return sign + String(BigInt(nativePrefix + (base <= this.nativeRadixLimit ? input : digits)));
+    }
     let integer = 0;
     let large: bigint | undefined;
     let result = '0';

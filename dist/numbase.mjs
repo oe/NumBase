@@ -152,6 +152,18 @@ var NumBase = function() {
 		}
 		var symbols = this.unicode ? unicodeSymbols(input) : input;
 		var bigRadix = typeof BigInt === "function" ? BigInt(base) : void 0;
+		var nativePrefix = bigRadix !== void 0 && symbols.length > 15 ? base === 2 ? "0b" : base === 8 ? "0o" : base === 16 ? "0x" : "" : "";
+		if (nativePrefix) {
+			var digits = "";
+			for (var j = 0; j < symbols.length; j++) {
+				var character = symbols[j];
+				var digit = this.digitIndexes[character];
+				if (digit === void 0) throw new TypeError("unexpected character <" + character + "> found");
+				if (digit >= base) throw new TypeError("<" + character + "> is out of the base limit");
+				if (base > this.nativeRadixLimit) digits += DEFAULT_ALPHABET.charAt(digit);
+			}
+			return sign + String(BigInt(nativePrefix + (base <= this.nativeRadixLimit ? input : digits)));
+		}
 		var integer = 0;
 		var large;
 		var result = "0";

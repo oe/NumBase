@@ -99,6 +99,35 @@ test('native radix formatting respects the selected alphabet prefix', () => {
   }
 });
 
+test('native parsing validates custom digits and preserves signs, zeros and fallback', () => {
+  const alphabets = [
+    '0123456789abcdef',
+    '0123456789ABCDEF',
+    'fedcba9876543210',
+    Array.from({ length: 16 }, (_, i) => String.fromCodePoint(0x1f600 + i)).join(''),
+  ];
+  const decimal = '1234567890'.repeat(100);
+  for (const alphabet of alphabets) {
+    const base = new NumBase(alphabet, { unicode: true });
+    for (const radix of [2, 8, 16]) {
+      const encoded = reference(decimal, base.BASE, radix);
+      assert.equal(base.decode(encoded, radix), decimal);
+      assert.equal(base.decode('-' + base.BASE[0].repeat(20) + encoded, radix), '-' + decimal);
+      assert.equal(base.decode(base.BASE[0].repeat(20), radix), '0');
+      assert.equal(base.decode('-' + base.BASE[0].repeat(20), radix), '-0');
+      assert.throws(() => base.decode(encoded + '!', radix), /unexpected character/);
+      if (radix < 16) assert.throws(() => base.decode(encoded + base.BASE[radix], radix), /base limit/);
+    }
+  }
+  const base = new NumBase();
+  for (const value of ['f'.repeat(20) + ' ', 'f'.repeat(20) + '\n', 'f'.repeat(20) + '-', '0x' + 'f'.repeat(20)]) {
+    assert.throws(() => base.decode(value, 16), TypeError);
+  }
+  const encoded = reference(decimal, base.BASE, 16);
+  vi.stubGlobal('BigInt', undefined);
+  assert.equal(base.decode(encoded, 16), decimal);
+});
+
 test('encoding preserves zero-filled groups and exact digits around large radix powers', () => {
   const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   for (const symbols of [alphabet, alphabet.split('').reverse().join('')]) {
