@@ -10,7 +10,8 @@ npm install numbase
 ```
 
 ```js
-const NumBase = require('numbase');
+import NumBase from 'numbase';
+
 const base62 = new NumBase(); // digit order: 0–9, a–z, A–Z
 const id = '18446744073709551615'; // keep database IDs as decimal strings
 const code = base62.encode(id); // 'lYGhA16ahyf'
@@ -24,6 +25,8 @@ Both methods return a string or throw. `encode()` accepts decimal strings, safe 
 ### Readable integer codes
 
 ```js
+import NumBase from 'numbase';
+
 const readable = new NumBase('0123456789ABCDEFGHJKMNPQRSTVWXYZ');
 readable.encode('18446744073709551615'); // 'FZZZZZZZZZZZZ'
 readable.decode('FZZZZZZZZZZZZ'); // '18446744073709551615'
@@ -33,6 +36,8 @@ readable.encode(9007199254740993); // throws TypeError: unsafe Number
 ### Convert hexadecimal integers to Base62
 
 ```js
+import NumBase from 'numbase';
+
 const hexadecimal = new NumBase('0123456789abcdef');
 const base62 = new NumBase();
 hexadecimal.convert('ff', base62); // '47'
@@ -44,6 +49,8 @@ hexadecimal.convert('1010', base62, { sourceRadix: 2, targetRadix: 8 }); // '12'
 ### Reuse instances for batches
 
 ```js
+import NumBase from 'numbase';
+
 const base62 = new NumBase();
 const hexadecimal = new NumBase('0123456789abcdef');
 const ids = ['18446744073709551615', '340282366920938463463374607431768211455'];
@@ -92,6 +99,8 @@ These are integer-digit recipes, not complete byte/text codecs. Base58 integer c
 By default, alphabets use UTF-16 code units, preserving existing encodings. Chinese BMP characters work directly. Opt in to code points for emoji or other supplementary characters:
 
 ```js
+import NumBase from 'numbase';
+
 const emoji = new NumBase('😀😁😂😃', { unicode: true });
 emoji.MAX_BASE; // 4
 emoji.encode('27'); // '😁😂😃'
@@ -113,16 +122,26 @@ NumBase converts integer representations. It does not generate IDs, encrypt valu
 
 ## Modules and TypeScript
 
-The package root exports the CommonJS constructor. Native Node.js imports receive it as the default export. An explicit ESM entry and generated declarations are also available:
+Use a default import in modern JavaScript. Node.js ES modules receive the package root's CommonJS constructor as the default export:
+
+```js
+import NumBase from 'numbase';
+
+const base62 = new NumBase();
+base62.encode('9007199254740993'); // 'FfGNdXsE9'
+```
+
+For a native ESM entry, including TypeScript with NodeNext module resolution, use the `.mjs` entry. It has matching generated declarations:
 
 ```ts
 import NumBase from 'numbase/dist/numbase.mjs';
+
 const base = new NumBase();
 const code: string = base.encode('9007199254740993');
 const small: string = base.encode(42);
 ```
 
-CommonJS TypeScript consumers can use `import NumBase = require('numbase')`.
+For existing CommonJS projects, `const NumBase = require('numbase')` remains supported. CommonJS TypeScript consumers can use `import NumBase = require('numbase')`.
 
 For browser scripts, `dist/numbase.min.js` exposes `window.NumBase`. AMD/CMD loaders and deep imports such as `numbase/dist/numbase` remain supported. Existing JavaScript entries retain ES5 syntax; BigInt is optional at runtime.
 
