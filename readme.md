@@ -145,7 +145,7 @@ For existing CommonJS projects, `const NumBase = require('numbase')` remains sup
 
 For browser scripts, `dist/numbase.min.js` exposes `window.NumBase`. AMD/CMD loaders and deep imports such as `numbase/dist/numbase` remain supported. Existing JavaScript entries retain ES5 syntax; BigInt is optional at runtime.
 
-## Migrating from 0.x or 1.0.0
+## Migrating from 0.x
 
 The current development version uses fixed instance configuration. The safe conversion behavior introduced in 1.0.0 remains. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes.
 
