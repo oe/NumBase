@@ -13,7 +13,7 @@ function command(args) {
 (async () => {
   try {
     const [packed] = JSON.parse(command(['pack', '--json', '--pack-destination', temporary]));
-    assert.ok(packed.files.every(file => file.path.startsWith('dist/') || ['LICENSE', 'package.json', 'readme.md'].includes(file.path)));
+    assert.ok(packed.files.every(file => file.path.startsWith('dist/') || ['LICENSE', 'package.json', 'readme.md', 'CHANGELOG.md'].includes(file.path)));
     const consumer = path.join(temporary, 'consumer');
     command(['install', '--prefix', consumer, '--ignore-scripts', '--no-audit', '--no-fund', path.join(temporary, packed.filename)]);
     const root = path.join(consumer, 'node_modules/numbase');
@@ -26,9 +26,12 @@ function command(args) {
     const esm = await import(pathToFileURL(root + '/dist/numbase.mjs'));
     assert.equal(new esm.default().decode('a'), '10');
     const emoji = new esm.default('😀😁😂😃', { unicode: true });
-    assert.equal(emoji.decodeStrict(emoji.encodeStrict(decimal)), decimal);
+    assert.equal(emoji.decode(emoji.encode(decimal)), decimal);
     assert.equal(emoji.convert(base.convert(base.encode(decimal), emoji), base), base.encode(decimal));
-    assert.throws(() => base.encodeStrict(Number.MAX_SAFE_INTEGER + 1), TypeError);
+    assert.throws(() => base.encode(Number.MAX_SAFE_INTEGER + 1), TypeError);
+    assert.equal(base.encodeStrict, undefined);
+    assert.equal(base.decodeStrict, undefined);
+    assert.ok(fs.existsSync(path.join(root, 'CHANGELOG.md')));
     const pkg = require(root + '/package.json');
     assert.ok(fs.existsSync(path.join(root, pkg.types)));
     assert.ok(fs.existsSync(path.join(root, 'dist/numbase.d.mts')));

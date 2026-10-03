@@ -1,4 +1,4 @@
-/*! numbase v0.1.2 | MIT | Saiya */
+/*! numbase v1.0.0 | MIT | Saiya */
 (function (root, factory) {
   if (typeof define === 'function' && (define.amd || define.cmd)) {
     define(function () { return factory(); });
@@ -16,18 +16,11 @@ function hasStandardDigits(alphabet, radix) {
 	for (var i = 0; i < radix; i++) if (alphabet[i] !== DEFAULT_ALPHABET.charAt(i)) return false;
 	return true;
 }
-function isInteger(value) {
-	return /^-?\d+$/.test("" + value);
-}
-function isExponential(value) {
-	return /e\+/.test(String(value));
-}
 function divide(decimal, radix) {
 	var quotient = [];
 	var remainder = 0;
 	for (var i = 0; i < decimal.length; i++) {
-		var character = decimal.charAt(i);
-		var value = character >= "0" && character <= "9" ? remainder * 10 + Number(character) : Number(String(remainder) + character);
+		var value = remainder * 10 + Number(decimal.charAt(i));
 		quotient.push(String(Math.floor(value / radix)));
 		remainder = value % radix;
 	}
@@ -85,24 +78,21 @@ var NumBase = function() {
 				writable: true
 			}
 		});
-		var characters = charList || DEFAULT_ALPHABET;
-		if (this.unicode && typeof characters !== "string") throw new TypeError("Unicode alphabet must be a string");
-		var alphabet = this.unicode ? unicodeSymbols(characters) : characters.split("");
-		var seen = Object.create(null);
-		for (var i = 0; i < alphabet.length; i++) {
-			var symbol = alphabet[i];
-			if (seen[symbol]) throw new TypeError("duplicated character <" + symbol + "> found");
-			seen[symbol] = true;
-		}
-		this.BASE = alphabet;
-		if (isExponential(Math.pow(alphabet.length, 2))) throw new TypeError("the base is super big, consider a small one");
-		this.MAX_BASE = alphabet.length;
+		var characters = charList === void 0 ? DEFAULT_ALPHABET : charList;
+		if (typeof characters !== "string") throw new TypeError("alphabet must be a string");
+		this.BASE = this.unicode ? unicodeSymbols(characters) : characters.split("");
+		this.MAX_BASE = this.BASE.length;
+		this.validateRadix();
 	}
+	/** Encode an exact integer, rejecting unsafe Numbers and invalid input. */
 	NumBase.prototype.encode = function(number, radix) {
-		if (radix == null) radix = this.MAX_BASE;
-		if (typeof number === "number" && isExponential(number)) throw new TypeError("number you wanna encode is super big, conside pass it as a string instead");
-		if (!(isInteger(number) && isInteger(radix) && +radix <= this.MAX_BASE && +radix > 1)) return number;
-		var base = +radix;
+		var base = this.validateRadix(radix);
+		if (typeof number === "number") {
+			if (Math.floor(number) !== number || Math.abs(number) > 9007199254740991) throw new TypeError("encode requires a safe integer Number; use a decimal string or bigint");
+		} else if (typeof number === "string") {
+			var match = /^-?[0-9]+$/.exec(number);
+			if (!match || match[0] !== number) throw new TypeError("encode requires a decimal integer string");
+		} else if (typeof number !== "bigint") throw new TypeError("encode requires a decimal string, safe integer Number, or bigint");
 		var decimal = String(number);
 		var sign = "";
 		if (decimal.charAt(0) === "-") {
@@ -110,7 +100,7 @@ var NumBase = function() {
 			decimal = decimal.slice(1);
 		}
 		var result = [];
-		if (decimal.length <= 15 && !/[^0-9]/.test(decimal)) {
+		if (decimal.length <= 15) {
 			var value = Number(decimal);
 			do {
 				result.push(this.BASE[value % base] + "");
@@ -118,7 +108,7 @@ var NumBase = function() {
 			} while (value);
 			return sign + result.reverse().join("");
 		}
-		if (typeof BigInt === "function" && base <= 4294967295 && !/[^0-9]/.test(decimal)) {
+		if (typeof BigInt === "function") {
 			var value = BigInt(decimal);
 			if (base <= 36 && hasStandardDigits(this.BASE, base)) return sign + value.toString(base);
 			var bigRadix = BigInt(base);
@@ -135,11 +125,11 @@ var NumBase = function() {
 		}
 		return sign + result.reverse().join("");
 	};
+	/** Decode nonempty alphabet digits to an exact decimal string. */
 	NumBase.prototype.decode = function(encoded, radix) {
-		if (radix == null) radix = this.MAX_BASE;
-		if (!(isInteger(radix) && +radix <= this.MAX_BASE && +radix > 1)) return encoded;
-		var base = +radix;
-		var input = "" + encoded;
+		var base = this.validateRadix(radix);
+		if (typeof encoded !== "string" || !encoded.length || encoded === "-") throw new TypeError("decode requires a nonempty encoded integer");
+		var input = encoded;
 		var sign = "";
 		if (input.charAt(0) === "-") {
 			sign = "-";
@@ -152,10 +142,10 @@ var NumBase = function() {
 			indexes = lookup;
 			for (var i = 0; i < this.BASE.length; i++) {
 				var symbol = this.BASE[i];
-				if (typeof symbol === "string" && (symbol.length === 1 || this.unicode) && lookup[symbol] === void 0) lookup[symbol] = i;
+				lookup[symbol] = i;
 			}
 		}
-		var bigRadix = typeof BigInt === "function" && base <= 4294967295 ? BigInt(base) : void 0;
+		var bigRadix = typeof BigInt === "function" ? BigInt(base) : void 0;
 		var integer = 0;
 		var large;
 		var result = "0";
@@ -175,31 +165,14 @@ var NumBase = function() {
 		}
 		return sign + (bigRadix === void 0 ? result : large === void 0 ? String(integer) : String(large));
 	};
-	/** Encode exact integer input, rejecting unsafe numbers and invalid configuration. */
-	NumBase.prototype.encodeStrict = function(value, radix) {
-		var base = this.strictRadix(radix);
-		if (typeof value === "number") {
-			if (Math.floor(value) !== value || Math.abs(value) > 9007199254740991) throw new TypeError("encodeStrict requires a safe integer Number; use a decimal string or bigint");
-		} else if (typeof value === "string") {
-			var match = /^-?[0-9]+$/.exec(value);
-			if (!match || match[0] !== value) throw new TypeError("encodeStrict requires a decimal integer string");
-		} else if (typeof value !== "bigint") throw new TypeError("encodeStrict requires a decimal string, safe integer Number, or bigint");
-		return this.encode(String(value), base);
-	};
-	/** Decode nonempty digits with strict radix and alphabet validation. */
-	NumBase.prototype.decodeStrict = function(value, radix) {
-		var base = this.strictRadix(radix);
-		if (typeof value !== "string" || !value.length || value === "-") throw new TypeError("decodeStrict requires a nonempty encoded integer");
-		return this.decode(value, base);
-	};
 	/** Convert between alphabets using exact decimal strings and strict validation. */
 	NumBase.prototype.convert = function(value, target, options) {
-		if (!target || typeof target.encodeStrict !== "function") throw new TypeError("conversion target must provide encodeStrict");
+		if (!target || typeof target.encode !== "function") throw new TypeError("conversion target must provide encode");
 		if (options !== void 0 && (options === null || typeof options !== "object")) throw new TypeError("options must be an object");
-		return target.encodeStrict(this.decodeStrict(value, options === null || options === void 0 ? void 0 : options.sourceRadix), options === null || options === void 0 ? void 0 : options.targetRadix);
+		return target.encode(this.decode(value, options === null || options === void 0 ? void 0 : options.sourceRadix), options === null || options === void 0 ? void 0 : options.targetRadix);
 	};
-	NumBase.prototype.strictRadix = function(radix) {
-		if (!Array.isArray(this.BASE) || this.BASE.length < 2) throw new TypeError("strict conversion requires at least two alphabet symbols");
+	NumBase.prototype.validateRadix = function(radix) {
+		if (!Array.isArray(this.BASE) || this.BASE.length < 2) throw new TypeError("conversion requires at least two alphabet symbols");
 		var unchanged = this.BASE.length === this.validatedAlphabet.length;
 		for (var i = 0; unchanged && i < this.BASE.length; i++) unchanged = this.BASE[i] === this.validatedAlphabet[i];
 		if (!unchanged) {

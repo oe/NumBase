@@ -9,6 +9,6 @@ const emoji = new NumBase('😀😁😂😃', { unicode: true });
 const hexadecimal = new Legacy('0123456789abcdef');
 const converted: string = hexadecimal.convert('ff', emoji);
 const reverse: string = emoji.convert(converted, hexadecimal);
-const strict: string = emoji.encodeStrict(42);
+const strict: string = emoji.encode(42);
 // @ts-expect-error strict Unicode decoding requires a string
-emoji.decodeStrict(42);
+emoji.decode(42);

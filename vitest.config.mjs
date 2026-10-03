@@ -10,10 +10,10 @@ export default defineConfig({
       reporter: ['text', 'html', 'json-summary', 'lcov'],
       thresholds: {
         perFile: true,
-        statements: 95,
-        branches: 95,
+        statements: 100,
+        branches: 100,
         functions: 100,
-        lines: 95,
+        lines: 100,
       },
     },
   },

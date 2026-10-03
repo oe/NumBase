@@ -26,11 +26,6 @@ function referenceEncode(decimal, alphabet, radix) {
   } while (value);
   return sign + encoded;
 }
-function outcome(callback) {
-  try { return { value: callback() }; }
-  catch (error) { return { type: error.name, message: error.message }; }
-}
-
 test('matches the documented arbitrary-size and Chinese examples', () => {
   const base = new NumBase();
   assert.equal(base.encode(huge), encodedHuge);
@@ -85,64 +80,35 @@ test('preserves numeric/string inputs, negative zero, and leading-zero conventio
   assert.equal(base.encode(9007199254740993n), base.encode('9007199254740993'));
 });
 
-test('retains legacy invalid-input passthrough and exception behavior', () => {
+test('rejects invalid values and coercion instead of passing inputs through', () => {
   const base = new NumBase();
-  const old = new Legacy();
-  const values = ['', '-', '1.5', '1e10', '12\n', '12\r', '12\u2028', '12\u2029', 1.5, NaN, Infinity, -Infinity, null, undefined, true, {}, [], [12], Symbol('x'), 10n];
-  const radices = [undefined, null, 0, 1, -2, 63, 2.5, NaN, '2', '02', '2\n', {}, true];
-  for (const radix of radices) {
-    for (const value of values) {
-      assert.deepEqual(outcome(() => base.encode(value, radix)), outcome(() => old.encode(value, radix)));
-      assert.deepEqual(outcome(() => base.decode(value, radix)), outcome(() => old.decode(value, radix)));
-    }
+  for (const value of ['', '-', '1.5', '1e10', '12\n', null, undefined, true, {}, [], [12], Symbol('x')]) {
+    assert.throws(() => base.encode(value), TypeError);
   }
-  assert.throws(() => base.encode(1e21), /super big/);
-  assert.throws(() => base.encode(-1e21), /super big/);
-});
-
-test('retains alphabet validation and default selection', () => {
-  for (const alphabet of [undefined, null, '', false, 0, 'a', '001', '😀😁', '0123456789', '中国上海市徐汇区', true, 123, {}]) {
-    const current = outcome(() => new NumBase(alphabet).BASE);
-    const legacy = outcome(() => new Legacy(alphabet).BASE);
-    if (alphabet && typeof alphabet !== 'string') assert.equal(current.type, legacy.type);
-    else assert.deepEqual(current, legacy);
+  for (const value of [1.5, NaN, Infinity, -Infinity, 9007199254740993, 1e21, -1e21]) {
+    assert.throws(() => base.encode(value), TypeError);
   }
-  assert.throws(() => new NumBase('001'), /duplicated character <0>/);
-  assert.equal(new NumBase('').MAX_BASE, 62);
-  assert.equal(new NumBase('a').encode('123'), '123');
-});
-
-test('preserves malformed decode errors, unusual alphabets, and mutable BASE', () => {
-  for (const alphabet of ['01', '-01', ' a!?', '__proto__', '0123456789']) {
-    const result = outcome(() => new NumBase(alphabet));
-    if (!result.value) continue;
-    const base = result.value;
-    const old = new Legacy(alphabet);
-    for (const value of ['', '-', '--', '0', ' 0', 'a', '!?', 'z', '-010']) {
-      assert.deepEqual(outcome(() => base.decode(value)), outcome(() => old.decode(value)));
-    }
-  }
-  const base = new NumBase('0123456789');
-  const old = new Legacy('0123456789');
-  for (const alphabet of [['x', 'x', 'z'], ['a', undefined, 'c'], ['a', 1, 'c'], ['a', 'bc', 'c']]) {
-    base.BASE = old.BASE = alphabet;
-    base.MAX_BASE = old.MAX_BASE = alphabet.length;
-    for (const value of ['0', '1', '2', '10']) {
-      assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
-    }
-    for (const value of ['x', 'z', '1', 'a', 'c', 'bc', 'xxxxxxxx', 'cccccccc', 'zzzzzzzz', 'x'.repeat(32), 'c'.repeat(32)]) {
-      assert.deepEqual(outcome(() => base.decode(value)), outcome(() => old.decode(value)));
-    }
+  for (const radix of [null, 0, 1, -2, 63, 2.5, NaN, '2', '02', {}, true]) {
+    assert.throws(() => base.encode('12', radix), RangeError);
+    assert.throws(() => base.decode('12', radix), RangeError);
   }
 });
 
-test('legacy encoding retains the distinct numeric and string coercion of objects', () => {
-  const base = new NumBase();
-  const old = new Legacy();
-  for (const representation of ['12\n', '12 ', '-12\n', '9007199254740993\n']) {
-    const value = { valueOf: () => 12, toString: () => representation };
-    assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
-    assert.throws(() => base.encodeStrict(value), TypeError);
+test('constructor rejects invalid alphabets and defaults only when omitted', () => {
+  assert.equal(new NumBase().MAX_BASE, 62);
+  for (const alphabet of [null, '', false, 0, 'a', '001', '-01', '😀😁', true, 123, {}]) {
+    assert.throws(() => new NumBase(alphabet), TypeError);
+  }
+});
+
+test('published valid integer encodings remain compatible', () => {
+  for (const alphabet of ['01', ' a!?', '0123456789', '中国上海市徐汇区']) {
+    const base = new NumBase(alphabet), old = new Legacy(alphabet);
+    for (const value of ['0', '-0', '123', '-123', huge]) {
+      assert.equal(base.encode(value), old.encode(value));
+      const encoded = old.encode(value);
+      assert.equal(base.decode(encoded), old.decode(encoded));
+    }
   }
 });
 
@@ -163,7 +129,7 @@ for (const file of ['numbase.js', 'numbase.min.js']) {
       const Constructor = sandbox.window ? sandbox.window.NumBase : sandbox.NumBase;
       assert.equal(new Constructor().decode(new Constructor().encode(huge)), huge);
       const emoji = new Constructor('😀😁😂😃', { unicode: true });
-      assert.equal(emoji.decodeStrict(emoji.encodeStrict('27')), '27');
+      assert.equal(emoji.decode(emoji.encode('27')), '27');
       assert.equal(new Constructor('0123456789abcdef').convert('1b', emoji), '😁😂😃');
     }
     for (const loader of ['amd', 'cmd']) {
@@ -172,7 +138,7 @@ for (const file of ['numbase.js', 'numbase.min.js']) {
       define[loader] = true;
       vm.runInNewContext(source, { define });
       assert.equal(new Constructor().encode(huge), encodedHuge);
-      assert.equal(new Constructor('😀😁', { unicode: true }).decodeStrict('😁😁'), '3');
+      assert.equal(new Constructor('😀😁', { unicode: true }).decode('😁😁'), '3');
     }
   });
 }
@@ -200,7 +166,7 @@ test('legacy browser/CommonJS bundles retain ES5 syntax', () => {
   }
 });
 
-test('native arithmetic and no-BigInt bundles preserve exact results and legacy edge cases', () => {
+test('native arithmetic and no-BigInt bundles preserve exact results and sign/zero boundaries', () => {
   const constructors = [NumBase];
   for (const file of ['numbase.js', 'numbase.min.js']) {
     const sandbox = { BigInt: undefined };
@@ -217,29 +183,14 @@ test('native arithmetic and no-BigInt bundles preserve exact results and legacy 
       for (const decimal of values) {
         const normalized = decimal[0] === '-' && BigInt(decimal) === 0n ? '-0' : BigInt(decimal).toString();
         const encoded = (decimal[0] === '-' && BigInt(decimal) === 0n ? '-' : '') + referenceEncode(decimal, base.BASE, radix);
-        assert.equal(base.encodeStrict(decimal, radix), encoded);
-        assert.equal(base.decodeStrict(encoded, radix), normalized);
+        assert.equal(base.encode(decimal, radix), encoded);
+        assert.equal(base.decode(encoded, radix), normalized);
       }
-    }
-    const old = new Legacy();
-    for (const value of ['12\n', '9007199254740993\n', '9007199254740993\r', '9007199254740993\u2028', '9007199254740993\u2029']) {
-      assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
-    }
-    base.BASE = ['a', undefined, 'c'];
-    old.BASE = ['a', undefined, 'c'];
-    base.MAX_BASE = old.MAX_BASE = 3;
-    assert.deepEqual(outcome(() => base.encode(huge)), outcome(() => old.encode(huge)));
-    // Mutated radices beyond array length still use the historical behavior;
-    // stay within exact carry arithmetic when comparing the 2016 reference.
-    for (const maximum of [4294967295, 4294967296, 900719925474099]) {
-      base.MAX_BASE = old.MAX_BASE = maximum;
-      assert.deepEqual(outcome(() => base.decode('cccccccc')), outcome(() => old.decode('cccccccc')));
-      assert.deepEqual(outcome(() => base.encode(huge)), outcome(() => old.encode(huge)));
     }
     const emoji = new Constructor('😀😁😂😃', { unicode: true });
     const encoded = referenceEncode(huge, Array.from('😀😁😂😃'), 4);
-    assert.equal(emoji.encodeStrict(huge), encoded);
-    assert.equal(emoji.decodeStrict(encoded), huge);
+    assert.equal(emoji.encode(huge), encoded);
+    assert.equal(emoji.decode(encoded), huge);
   }
 });
 
@@ -252,18 +203,13 @@ test('source fallback without BigInt matches exact native results for signed cus
   ]) {
     for (const decimal of ['0', '-0', '00000123', '-00000123', '9007199254740993', huge]) {
       const base = new NumBase(alphabet, { unicode });
-      vectors.push({ alphabet, unicode, decimal, encoded: base.encodeStrict(decimal), decoded: base.decodeStrict(base.encodeStrict(decimal)) });
+      vectors.push({ alphabet, unicode, decimal, encoded: base.encode(decimal), decoded: base.decode(base.encode(decimal)) });
     }
   }
   vi.stubGlobal('BigInt', undefined);
   for (const { alphabet, unicode, decimal, encoded, decoded } of vectors) {
     const base = new NumBase(alphabet, { unicode });
-    assert.equal(base.encodeStrict(decimal), encoded);
-    assert.equal(base.decodeStrict(encoded), decoded);
-  }
-  const base = new NumBase();
-  const old = new Legacy();
-  for (const value of ['12\n', '9007199254740993\n', '9007199254740993\r', '9007199254740993\u2028', '9007199254740993\u2029']) {
-    assert.deepEqual(outcome(() => base.encode(value)), outcome(() => old.encode(value)));
+    assert.equal(base.encode(decimal), encoded);
+    assert.equal(base.decode(encoded), decoded);
   }
 });

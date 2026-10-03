@@ -1,0 +1,23 @@
+# Changelog
+
+## 1.0.0
+
+### Breaking changes
+
+- `encode()` and `decode()` always return strings or throw. Invalid inputs and radices no longer pass through unchanged, and coercible objects are rejected.
+- `encode()` rejects unsafe, fractional, and non-finite Numbers. Pass large integers as exact decimal strings or bigint. Lost Number precision cannot be recovered.
+- Radices must be numeric integers. String and null radices are rejected; omit the argument to use the default.
+- `decode()` requires a nonempty string with digits. Empty and sign-only values are rejected rather than treated as zero.
+- An explicit constructor alphabet must be a string with at least two unique symbols and no negative sign. Empty/null and one-symbol alphabets no longer select a default or pass through conversion.
+- Public `BASE` and `MAX_BASE` changes are validated before conversion.
+- The unpublished `encodeStrict()` and `decodeStrict()` methods are removed; their checks are now the default behavior.
+
+### Improvements
+
+- Native BigInt acceleration with an exact decimal-string fallback for older runtimes.
+- Exact alphabet-to-alphabet conversion and opt-in Unicode code-point alphabets.
+- Generated TypeScript declarations and native ESM entry, preserving CommonJS, browser globals, AMD/CMD, deep imports, and ES5 syntax.
+- TypeScript development, Vite + pnpm builds, Vitest/V8 coverage gates, reproducible builds, and Node 22/24 CI.
+- Documented database-ID batches, alphabet recipes, and fixed encoding compatibility vectors.
+
+Default Base62 remains `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`. Valid integer encodings, UTF-16 defaults, negative signs, string negative zero, and leading-zero normalization are preserved.

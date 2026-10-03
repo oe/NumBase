@@ -56,9 +56,7 @@ const emoji = new Current('😀😁😂😃😊🚀中国', { unicode: true });
 const bmpEncoded = bmp.encode(decimal);
 const emojiEncoded = emoji.encode(decimal);
 cases.push(
-  ['plain vs strict encode (1,000 digits)', () => current.encode(decimal), () => current.encodeStrict(decimal), 10],
-  ['plain vs strict encode (small integer)', () => current.encode(19901230), () => current.encodeStrict(19901230), 10000],
-  ['manual strict pipeline vs convert (1,000 digits)', () => hexadecimal.encodeStrict(current.decodeStrict(encoded)), () => current.convert(encoded, hexadecimal), 10],
+  ['manual pipeline vs convert (1,000 digits)', () => hexadecimal.encode(current.decode(encoded)), () => current.convert(encoded, hexadecimal), 10],
   ['UTF16 vs Unicode BMP decode (1,000 digits)', () => bmp.decode(bmpEncoded), () => unicodeBMP.decode(bmpEncoded), 10],
   ['BMP vs emoji code-point decode (1,000 digits)', () => unicodeBMP.decode(bmpEncoded), () => emoji.decode(emojiEncoded), 10],
 );
@@ -79,7 +77,6 @@ for (const [name, value] of [
   for (const [operation, before, after] of [
     ['encode', () => legacy.encode(value), () => current.encode(value)],
     ['decode', () => legacy.decode(encoded), () => current.decode(encoded)],
-    ['strict encode', () => legacy.encodeStrict ? legacy.encodeStrict(value) : legacy.encode(value), () => current.encodeStrict(value)],
   ]) {
     assert.equal(after(), before());
     const [oldMs, newMs] = measurePair(before, after, 5000);

@@ -1,6 +1,6 @@
 {
   "name": "numbase",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Precision-safe decimal integer and Base62 conversion with custom alphabets. Zero runtime dependencies.",
   "main": "dist/numbase.min.js",
   "repository": {
@@ -39,7 +39,8 @@
   "homepage": "https://github.com/oe/NumBase#readme",
   "types": "dist/numbase.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "vite build && pnpm build:types",

@@ -7,28 +7,21 @@ interface ConvertOptions {
     targetRadix?: number;
 }
 interface ConversionTarget {
-    encodeStrict(value: string, radix?: number): string;
+    encode(value: string, radix?: number): string;
 }
-type Radix = number | string | null;
 declare class NumBase {
     BASE: string[];
     MAX_BASE: number;
     private readonly unicode;
     private validatedAlphabet;
-    constructor(charList?: string | null, options?: NumBaseOptions);
-    encode(value: string, radix?: Radix): string;
-    encode(value: number, radix?: Radix): string | number;
-    encode(value: bigint, radix?: Radix): string | bigint;
-    encode<T>(value: T, radix?: Radix): string | T;
-    decode(value: string, radix?: Radix): string;
-    decode<T>(value: T, radix?: Radix): string | T;
-    /** Encode exact integer input, rejecting unsafe numbers and invalid configuration. */
-    encodeStrict(value: string | number | bigint, radix?: number): string;
-    /** Decode nonempty digits with strict radix and alphabet validation. */
-    decodeStrict(value: string, radix?: number): string;
+    constructor(charList?: string, options?: NumBaseOptions);
+    /** Encode an exact integer, rejecting unsafe Numbers and invalid input. */
+    encode(number: string | number | bigint, radix?: number): string;
+    /** Decode nonempty alphabet digits to an exact decimal string. */
+    decode(encoded: string, radix?: number): string;
     /** Convert between alphabets using exact decimal strings and strict validation. */
     convert(value: string, target: ConversionTarget, options?: ConvertOptions): string;
-    private strictRadix;
+    private validateRadix;
 }
 
 
