@@ -1,5 +1,11 @@
 # NumBase
 
+[![MIT license](https://img.shields.io/npm/l/numbase.svg)](https://github.com/oe/NumBase/blob/main/LICENSE)
+[![Written in TypeScript](https://img.shields.io/badge/%3C%2F%3E-typescript-blue)](https://www.typescriptlang.org/)
+[![npm version](https://badge.fury.io/js/numbase.svg)](https://www.npmjs.com/package/numbase)
+[![npm monthly downloads](https://img.shields.io/npm/dm/numbase.svg)](https://www.npmjs.com/package/numbase)
+[![CI](https://github.com/oe/NumBase/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oe/NumBase/actions/workflows/ci.yml)
+
 **Choose any radix ≥2 and define the symbol for each digit.** NumBase converts exact integers using your alphabet: the first symbol represents 0, the next represents 1, and so on. Use letters, punctuation, Chinese characters, or Unicode code points to define your own integer representation.
 
 Encode decimal strings, safe integer Numbers, or bigint; decode to exact decimal strings; or convert between your alphabets. Large integer precision is preserved. Zero runtime dependencies.
