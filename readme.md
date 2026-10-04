@@ -180,9 +180,9 @@ The following compares **published NumBase 1.1.0** in one Linux x64 / Intel Xeon
 
 NumBase was faster at decoding the sampled short IDs; @sindresorhus/base62 was faster at encoding. Long-input decoding was similar. These measurements do not establish a universal winner. base-x has different byte/leading-zero semantics, so it is not timed against integer APIs.
 
-The **1.1.1 conversion optimizations** measured about 2.2–2.7× faster Base62 encoding for 64-/128-bit IDs and 4.8–5.4× faster for 1,000-digit decimal strings than published 1.1.0 on Node 22/24. It also beat @sindresorhus/base62 on these samples; gains persisted when output bytes were materialized. See the [optimization measurements and limitations](https://github.com/oe/NumBase/blob/master/benchmarks/competitors/README.md#111-conversion-optimizations). Base62 decoding keeps its existing algorithm. Native parsing also improves long hexadecimal decoding by about 3.4–3.6× versus published 1.1.0, while preserving strict digit validation.
+The **1.1.1 conversion optimizations** measured about 2.2–2.7× faster Base62 encoding for 64-/128-bit IDs and 4.8–5.4× faster for 1,000-digit decimal strings than published 1.1.0 on Node 22/24. It also beat @sindresorhus/base62 on these samples; gains persisted when output bytes were materialized. See the [optimization measurements and limitations](https://github.com/oe/NumBase/blob/main/benchmarks/competitors/README.md#111-conversion-optimizations). Base62 decoding keeps its existing algorithm. Native parsing also improves long hexadecimal decoding by about 3.4–3.6× versus published 1.1.0, while preserving strict digit validation.
 
-See [the full comparison](https://github.com/oe/NumBase/tree/master/benchmarks/competitors) for exact adapters, pinned dependencies, feature sources, limitations, Node 22 results, native hexadecimal results, raw samples and reproduction commands.
+See [the full comparison](https://github.com/oe/NumBase/tree/main/benchmarks/competitors) for exact adapters, pinned dependencies, feature sources, limitations, Node 22 results, native hexadecimal results, raw samples and reproduction commands.
 
 ## Modules and TypeScript
 
